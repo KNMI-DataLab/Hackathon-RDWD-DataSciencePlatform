@@ -1,0 +1,4 @@
+{
+ "dataURL": "opendataUrl",
+ "fields": ["temperature", "precipitation"]
+}

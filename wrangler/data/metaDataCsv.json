@@ -1,0 +1,19 @@
+{
+    "csvSeparator": ",",
+    "geoProjection": "rijksDriehoek",
+    "projString": "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +no_defs",
+    "columnX": 9,
+    "columnY": 10,
+    "dateFormat": "%d%b%y",
+    "hourFormat": "hourInterval",
+    "timeZone":   "CET",
+    "minuteFormat": "plainMinute",    
+    "columnDate": 2,
+    "columnHour": 1,
+    "columnMinute": 3
+}
+
+# Niveaukop,Uur,datum,minuut,ernong,N_Slacht_dood, N_Slacht_Zh,Aardong,loctypon,X,Y,N_Personenauto,N_Brom_snorfiets,N_Fiets,N_Voetganger
+# Ongeval exact gekoppeld aan BN,7.00-07.59,07JAN06,50,Letsel,0,1,Frontaal,Kruispunt,95069,451430,1,0,0,0
+# ==> this translates to 7:50 local time
+
