@@ -90,9 +90,9 @@ class dataWranglerProcessor():
             except:
                 pid = "%5d" %(0)
             try:
-                print "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args))
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
             except:
-                print "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
 
     def __init__(self):
         '''

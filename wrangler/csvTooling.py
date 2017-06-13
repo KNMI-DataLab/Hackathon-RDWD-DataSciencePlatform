@@ -55,9 +55,9 @@ class csvDataObject():
             except:
                 pid = "%5d" %(0)
             try:
-                print "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args))
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
             except:
-                print "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
 
     def __init__(self):
         '''
@@ -77,18 +77,18 @@ class csvDataObject():
         self.meteoDataStore = {}
         
         if self.verboseLevel>100:
-            print("Path at terminal when executing this file")
-            print(os.getcwd() + "\n")
-            print("This file path, relative to os.getcwd()")
-            print(__file__ + "\n")
-            print("This file full path (following symlinks)")
+            printProgress("Path at terminal when executing this file")
+            printProgress(os.getcwd() + "\n")
+            printProgress("This file path, relative to os.getcwd()")
+            printProgress(__file__ + "\n")
+            printProgress("This file full path (following symlinks)")
             full_path = os.path.realpath(__file__)
-            print(full_path + "\n")
-            print("This file directory and name")
+            printProgress(full_path + "\n")
+            printProgress("This file directory and name")
             path, file = os.path.split(full_path)
-            print(path + ' --> ' + file + "\n")
-            print("This file directory only")
-            print(os.path.dirname(full_path))        
+            printProgress(path + ' --> ' + file + "\n")
+            printProgress("This file directory only")
+            printProgress(os.path.dirname(full_path))        
 
     def __del__(self):
         #self.CLASSPRINT('..Destructor()..')
@@ -142,10 +142,10 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
     try:
         datetime_with_tz   = local_tz.localize(datetime_without_tz, is_dst=None) # No daylight saving time
     except pytz.exceptions.AmbiguousTimeError:
-        #print('pytz.exceptions.AmbiguousTimeError: %s' % dt)
+        #printProgress('pytz.exceptions.AmbiguousTimeError: %s' % dt)
         needToDecide = True
     except pytz.exceptions.NonExistentTimeError:
-        #print('pytz.exceptions.NonExistentTimeError: %s' % dt)        
+        #printProgress('pytz.exceptions.NonExistentTimeError: %s' % dt)        
         needToDecide = True
     if needToDecide:
         datetime_with_tz   = local_tz.localize(datetime_without_tz, is_dst=False) 
@@ -177,10 +177,10 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         try:
             datetime_with_tz   = local_tz.localize(datetime_without_tz, is_dst=None) # No daylight saving time
         except pytz.exceptions.AmbiguousTimeError:
-            #print('pytz.exceptions.AmbiguousTimeError: %s' % dt)
+            #printProgress('pytz.exceptions.AmbiguousTimeError: %s' % dt)
             needToDecide = True
         except pytz.exceptions.NonExistentTimeError:
-            #print('pytz.exceptions.NonExistentTimeError: %s' % dt)        
+            #printProgress('pytz.exceptions.NonExistentTimeError: %s' % dt)        
             needToDecide = True
         if needToDecide:
             datetime_with_tz   = local_tz.localize(datetime_without_tz, is_dst=False) 
@@ -220,7 +220,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         return utcTimeStr
     
     def ReadInputCSV(self):
-        self.CLASSPRINT(' reading metaCSVfile: %s' %(self.metaCSVfile) )
+        self.CLASSPRINT('reading metaCSVfile: %s' %(self.metaCSVfile) )
         self.metaCSVdict = jst.ReadJsonConfigurationFromFile(self.metaCSVfile)
         if self.verbose:
             print self.metaCSVdict
@@ -244,7 +244,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         }
         '''
 
-        self.CLASSPRINT(' reading inputCSVfile: %s' %(self.inputCSVfile) )
+        self.CLASSPRINT('reading inputCSVfile: %s' %(self.inputCSVfile) )
         self.numHeaderLines = 1
         # read and store header
         self.headerText = ""
@@ -258,13 +258,13 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             n -= 1
         ftxt.close()
         if self.verbose:
-            print "headerText=\n*****\n%s"  %(self.headerText); print "*****"
+            self.CLASSPRINT( "headerText=\n%s"  %(self.headerText))
         self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines, comments="#", dtype="|S300",  delimiter=self.delimiter)                      
         if self.limitTo>0:
             self.dataColumns = self.dataUnsortedStr[:self.limitTo, self.columnsList ]
             if self.verbose:
-                #pprint.pprint(self.dataColumns) 
-                print self.dataColumns
+                #pprint.pprintProgress(self.dataColumns) 
+                self.CLASSPRINT( "dataColumns:\n", self.dataColumns )
         else:
             self.dataColumns = self.dataUnsortedStr[:, self.columnsList ]
         #dataUnsorted = dataUnsortedStr.astype(dtype=[('date', str), ('time', str), ('id', str), ('lon', float), ('lat', float), ('flightlevel', float) , ('windSpeed', float), ('windDirection', float), ('temp', float), ('flightphase', str)  ])
@@ -272,7 +272,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         queryDataArray = []
         idCounter = 0
         if self.verbose:
-            print "Decoding date-time format..."
+            self.CLASSPRINT("Decoding date-time format...")
         for aa in self.dataColumns:
             utcTimeStr = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
             if utcTimeStr==None:  # None means INVALID request!
@@ -291,9 +291,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
         self.minDateTime = queryDataNPADateTimeSorted[0,1]
         self.maxDateTime = queryDataNPADateTimeSorted[-1,1]
-        printProgress("*******************************************")
-        printProgress("***** Computing LON-LAT STARTED.     ******")
-        printProgress("*******************************************")       
+        self.CLASSPRINT("*******************************************")
+        self.CLASSPRINT("***** Computing LON-LAT STARTED.     ******")
+        self.CLASSPRINT("*******************************************")       
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
         # [  [id, utc-time, X-coord, Y-coord ], .. ]
@@ -307,9 +307,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.llbox_east = np.max(longitudes)
         self.llbox_north = np.max(latitudes)
         self.llbox_south = np.min(latitudes)
-        printProgress("*******************************************")
-        printProgress("***** Computing LON-LAT FINISHED.    ******")
-        printProgress("*******************************************")
+        self.CLASSPRINT("*******************************************")
+        self.CLASSPRINT("***** Computing LON-LAT FINISHED.    ******")
+        self.CLASSPRINT("*******************************************")
         
         print "##########################################################"
         print "minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)       
