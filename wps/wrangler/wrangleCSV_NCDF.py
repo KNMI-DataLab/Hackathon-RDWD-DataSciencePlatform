@@ -79,7 +79,7 @@ class dataWranglerProcessor():
         self.verbose=False
 
     def SetVerboseLevel(self, verboseLevel):
-        self.verboseLevel = 0
+        self.verboseLevel = verboseLevel
 
     def GetClassName(self):
         return self.__class__.__name__
