@@ -1,12 +1,12 @@
 #!/usr/bin/python
 #***********************************************************************
-#*       wrangleCSV-NCDF.py     Science Platform Project              **
+#*       wrangleCSV_NCDF.py     Science Platform Project              **
 #***********************************************************************
 #*                      All rights reserved                           **
 #*                    Copyright (c) 2017 KNMI                         **
 #*             Royal Netherlands Meteorological Institute             **
 #***********************************************************************
-#* Demo-script : wrangleCSV-NCDF.py
+#* Demo-script : wrangleCSV_NCDF.py
 #* Purpose     : On the basis of CSV (geo-locations and time) 
 #*               extract from NetCDF data meteorological information
 #* 
@@ -22,14 +22,14 @@
 [sciencePlatform/wrangler] >
 
 TEST-JOB:
-python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData100lines.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData100lines.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
 meld data/ExportOngevalsData10lines.csv output/meteoDataAdded.csv
 
 FULL-JOB:
-python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
 
 PREVIEW-JOB:
-python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv 
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv 
 
 '''
 
