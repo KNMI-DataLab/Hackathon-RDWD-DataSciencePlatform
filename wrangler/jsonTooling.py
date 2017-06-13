@@ -130,6 +130,7 @@ def ReadJsonConfigurationFromFile(jsonFileName):
         if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
             w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
             #sys.exit(1)
+            raise ValueError('JSON-INVALID')            
             return None
         try:
             w3dxConfigDict = commentjson.loads(jsonStr, encoding=JsonEncodingType, object_hook=_decode_dict)
@@ -137,7 +138,8 @@ def ReadJsonConfigurationFromFile(jsonFileName):
             exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), enumerateLines( str(jsonStr) ))
             (jsonOK, errMsg) = (False, exceptionStr)
             printHandleJsonValidity(jsonOK, errMsg)
-            sys.exit(1)
+            #sys.exit(1)
+            raise ValueError('JSON-INVALID')
             #return None
     else:
         # In case of missing library commentjson
@@ -152,7 +154,8 @@ def ReadJsonConfigurationFromFile(jsonFileName):
         if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
             w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
             #print "ERROR: jsonStr is NOT VALID JSON!\n"
-            sys.exit(1)
+            #sys.exit(1)
+            raise ValueError('JSON-INVALID')            
             #return None
         try:
             w3dxConfigDict = json.loads(jsonStr, encoding=JsonEncodingType, object_hook=_decode_dict)
@@ -160,7 +163,8 @@ def ReadJsonConfigurationFromFile(jsonFileName):
             exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), enumerateLines( str(jsonStr) ))
             (jsonOK, errMsg) = (False, exceptionStr)
             printHandleJsonValidity(jsonOK, errMsg)
-            sys.exit(1)
+            #sys.exit(1)
+            raise ValueError('JSON-INVALID')            
             #return None
 
     return w3dxConfigDict

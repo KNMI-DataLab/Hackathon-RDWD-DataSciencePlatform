@@ -32,7 +32,7 @@ PREVIEW-JOB:
 python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv 
 
 '''
-
+#from __future__ import print_function
 import sys, os, os.path, string, datetime, re
 import vtk
 import csvTooling as csvT
@@ -50,13 +50,17 @@ else:
     DATAPATH = "./data/"
 
 thisApp = os.path.basename(sys.argv[0])
+csvT.loggerName = thisApp[:]
 homeDir = os.path.expanduser("~")
 
 defaultDataDir = DATAPATH
-defaultLogFile = "./wranglerProcess.log"
 
-logFile = defaultLogFile[:]
-loglevel = logging.DEBUG
+# This is a temporary filename for the logfile;
+# We will use ${outputCSV}.log instead.
+csvT.defaultLogFile = "./wranglerProcess.log" 
+csvT.logFileName = csvT.defaultLogFile[:]
+#csvT.loglevel = logging.DEBUG
+
 
 class dataWranglerProcessor():
     '''
@@ -80,6 +84,7 @@ class dataWranglerProcessor():
     def GetClassName(self):
         return self.__class__.__name__
 
+
     def CLASSPRINT(self,*args):
         '''
         Printing debug information ...
@@ -90,9 +95,9 @@ class dataWranglerProcessor():
             except:
                 pid = "%5d" %(0)
             try:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,csvT.loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
             except:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,csvT.loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
 
     def __init__(self):
         '''
@@ -108,14 +113,6 @@ class dataWranglerProcessor():
         self.progressBatchSize   = 1 # Number of items in processing batches that represent 1% of the job;
         # This triggers the status-update.
         
-        if os.path.exists(logFile):
-            try:
-                os.remove(logFile)
-            except:
-                pass
-        logging.basicConfig(filename=logFile, level=loglevel, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        logger = logging.getLogger('main')
         
 
     def __del__(self):
@@ -128,29 +125,33 @@ class dataWranglerProcessor():
                     } )
         limitTo: OPTIONAL parameter                    
         '''
+        if not "outputCSV" in argsDict:
+            printProgress("ERROR: outputCSV must be provided! ")
+            raise ValueError('MISSING-input-file(s)')
+        else:
+            self.outputCSV = argsDict["outputCSV"]
+
+        # We will use ${outputCSV}.log instead.
+        csvT.logFileName = self.outputCSV + ".log"
+        csvT.InitializeWranglerLogger(csvT.logFileName)
+        
         if not "inputCSV" in argsDict:
             printProgress("ERROR: inputCSV must be provided! ")
-            sys.exit(1)
+            raise ValueError('MISSING-input-file(s)')
         else:
             self.inputCSV = argsDict["inputCSV"]
 
         if not "metaCSV" in argsDict:
             printProgress("ERROR: metaCSV must be provided! ")
-            sys.exit(1)
+            raise ValueError('MISSING-input-file(s)')
         else:
             self.metaCSV = argsDict["metaCSV"]
 
         if not "jobDesc" in argsDict:
             printProgress("ERROR: jobDesc must be provided! ")
-            sys.exit(1)
+            raise ValueError('MISSING-input-file(s)')
         else:
             self.jobDesc = argsDict["jobDesc"]
-
-        if not "outputCSV" in argsDict:
-            printProgress("ERROR: outputCSV must be provided! ")
-            sys.exit(1)
-        else:
-            self.outputCSV = argsDict["outputCSV"]
 
         if not "limitTo" in argsDict:  # limitTo: OPTIONAL parameter
             self.limitTo = -1 # Does not apply limit; process the whole csv dataset
@@ -159,7 +160,7 @@ class dataWranglerProcessor():
 
         if not os.path.exists(self.inputCSV):
             printProgress("ERROR: inputCSV does NOT exists! %s " %(self.inputCSV))
-            sys.exit(1)
+            raise ValueError('MISSING-input-file(s)')
             
         self.csvDataObj = csvT.csvDataObject()
         self.csvDataObj.SetInputCSVFile(self.inputCSV)
@@ -248,7 +249,7 @@ if __name__ == "__main__":
     parser.add_option("--limitTo", dest="limitTo", metavar='N', type=int, default=-1,
                       help="Used to quickly wrangler just a few lines of the user input.")
 
-    parser.add_option("-o", "--logfile", dest="logfile", metavar="STRING", default=defaultLogFile,
+    parser.add_option("-o", "--logfile", dest="logfile", metavar="STRING", default=csvT.defaultLogFile,
                       help="The path and name of the file used by this program for its logging output.")
                       
     parser.add_option("-l", "--loglevel", dest="loglevel", metavar="STRING", default="info",
@@ -269,15 +270,23 @@ if __name__ == "__main__":
     elif options.loglevel == "fatal":
         loglevel = logging.FATAL
         
-    logFile = options.logfile[:]
+    csvT.logFileName = options.logfile[:]
     
-    
-    dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
-                      "outputCSV":options.outputCSV, "limitTo": options.limitTo 
-                    } )
-    dwp.ReadInputCSV()
-    dwp.WrangleWithNetCdfData()
 
+    try:
+        dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
+                          "outputCSV":options.outputCSV, "limitTo": options.limitTo 
+                        } )
+        dwp.csvDataObj.SetVerboseLevel(10)
+        dwp.ReadInputCSV()
+        dwp.WrangleWithNetCdfData()
+
+        #Possible exceptions raised:
+        #raise ValueError('JSON-INVALID')
+        #raise ValueError('MISSING-input-file(s)')    
+    except ValueError as err:
+        printProgress("Catched exception:"+str(err.args))
+        sys.exit(1)
 
     sys.exit(0)
     

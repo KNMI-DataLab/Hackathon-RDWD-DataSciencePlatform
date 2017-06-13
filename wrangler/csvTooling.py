@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+#from __future__ import print_function
 import sys, os, os.path, glob, string, re
 import inspect
 import math
@@ -10,23 +11,38 @@ from pyproj import Geod
 import csv
 from datetime import datetime,timedelta
 import pytz 
-
 import pprint
-
 import jsonTooling as jst
+import os, sys
 
 #from numpy import *
 #from numpy import ma
 #import scipy as Sci
 #import scipy.linalg
 
-import logging
 
-def printProgress(infoStr, log=True):
-    print infoStr
-    if log:
-        logger = logging.getLogger('main')
-        logger.info(infoStr)
+logFileName =  "/tmp/wranglerProcess.log"
+logFile = None
+
+wranglerLogger = None
+loggerName = "abcd"
+
+def InitializeWranglerLogger(filename=logFileName, level = 0):
+    '''
+    '''
+    try:
+        if os.path.exists(filename):
+            os.remove(filename)
+    except:
+        print >> sys.stderr, "WARNING: Could not remove file: %s" %(filename)
+    global logFile
+    logFile=open(logFileName, 'w+')         
+    print >> sys.stderr, "WARNING: Could not remove file: %s" %(filename)
+
+def printProgress(infoStr):
+    print >> sys.stderr, infoStr
+    if logFile:
+        logFile.write(infoStr+"\n")
 
 
 geoTransfWGS84 = Geod(ellps='WGS84')
@@ -55,9 +71,9 @@ class csvDataObject():
             except:
                 pid = "%5d" %(0)
             try:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
             except:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,pid,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
+                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
 
     def __init__(self):
         '''
@@ -99,7 +115,7 @@ class csvDataObject():
             return fname
         else:
             self.CLASSPRINT(' ERROR! (%s) File not exist: %s' %(infoStr, fname))
-            sys.exit(1)
+            raise ValueError('MISSING-input-file(s)')
     
     def SetInputCSVFile(self,inputCSV):
         self.inputCSVfile = self.checkFile(inputCSV,"inputCSV")
@@ -187,16 +203,16 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         datetime_in_utc    = datetime_with_tz.astimezone(pytz.utc)
 
-        if self.verbose:
-            print datetime_with_tz.strftime(fmt),'=>', datetime_in_utc.strftime(fmt)
-        return datetime_in_utc
+        datetime_with_tz_str = datetime_with_tz.strftime(fmt)
+        datetime_in_utc_str  = datetime_in_utc.strftime(fmt)
+
+        return (datetime_in_utc, datetime_in_utc_str, datetime_with_tz_str) 
+
         
     def DecodeDateTime(self, dateStr, hourStr, minuteStr):
         if self.metaCSVdict['dateFormat'] == "%d%b%y":
             givenDate = datetime.strptime(dateStr, "%d%b%y")
             #analysisTime = datetime.strptime(specs['tag']['starttime'], "%Y%m%d%H")
-        if self.verbose:
-            print dateStr, '=>', givenDate,';', 
             
         if self.metaCSVdict['hourFormat'] == "hourInterval":
             try:
@@ -205,16 +221,19 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 else:
                     hour = float(hourStr[:3])
             except:
-                self.CLASSPRINT(' ERROR hour extraction from: "%s"' %(hourStr) )
+                self.CLASSPRINT('ERROR: hour extraction from: "%s"' %(hourStr) )
                 return None  # this mean INVALID request
                 
-            if self.verbose:
-                print hourStr, '=>', hour,';', 
             minute = int(minuteStr)
+
             
         localTime = givenDate + timedelta(hours=hour, minutes=minute)
         
-        utcTime = self.ConvertLocalDateTime2Utc(localTime, zone=self.metaCSVdict['timeZone'])
+        (utcTime, datetime_in_utc_str, datetime_with_tz_str)  = self.ConvertLocalDateTime2Utc(localTime, zone=self.metaCSVdict['timeZone'])
+        
+        #if self.verbose and self.verboseLevel>=10:
+        self.CLASSPRINT(dateStr, '=>', givenDate,';', hourStr, '=>', hour,';',datetime_with_tz_str,'=>', datetime_in_utc_str)
+        
         fmt = '%Y-%m-%d %H:%M:%S %Z'
         utcTimeStr = utcTime.strftime(fmt)
         return utcTimeStr
@@ -223,7 +242,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT('reading metaCSVfile: %s' %(self.metaCSVfile) )
         self.metaCSVdict = jst.ReadJsonConfigurationFromFile(self.metaCSVfile)
         if self.verbose:
-            print self.metaCSVdict
+            self.CLASSPRINT(self.metaCSVdict )
         self.delimiter = self.metaCSVdict['csvSeparator']
         self.columnsList = []
         self.columnsList.append(self.metaCSVdict['columnDate'])
@@ -233,7 +252,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.columnsList.append(self.metaCSVdict['columnY'])
         '''
         {
-        'dateFormat': 'DDmmmYY', 'hourFormat': 'hourInterval',     
+        'dateFormat': 'DDmmmYY', 'hourFormat': 'hourInterval',
         'columnDate': 2, 'columnHour': 1, 'columnMinute': 3, 
         'columnX': 9, 'columnY': 10, 
         'minuteFormat': 'plainMinute', 
@@ -311,19 +330,19 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT("***** Computing LON-LAT FINISHED.    ******")
         self.CLASSPRINT("*******************************************")
         
-        print "##########################################################"
-        print "minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)       
-        print "LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south)
-        print "##########################################################"
+        self.CLASSPRINT("##########################################################")
+        self.CLASSPRINT("minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)  )
+        self.CLASSPRINT("LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south) )
+        self.CLASSPRINT( "##########################################################")
         #print "queryDataNPADateTimeSorted.shape=", queryDataNPADateTimeSorted[:,0].shape
         #print "longitudes.shape=", longitudes.shape
         self.queryDataNPAdtsLL = np.vstack(( queryDataNPADateTimeSorted[:,0], queryDataNPADateTimeSorted[:,1], 
                                         queryDataNPADateTimeSorted[:,2], queryDataNPADateTimeSorted[:,3], 
                                         longitudes,latitudes)).T
         if self.verbose:
-            print "queryDataNPADateTimeSorted:"
+            self.CLASSPRINT("queryDataNPADateTimeSorted:")
             for i in xrange(10):
-                print list(self.queryDataNPAdtsLL[i,:])
+                self.CLASSPRINT(list(self.queryDataNPAdtsLL[i,:]))
         return
 
     def GetTimeRangeOfData(self):
@@ -382,7 +401,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         else:
             self.meteoDataStore[parameterName] = np.random.uniform(low=0.0, high=100.0, size=(dims[0],))
         if self.verbose:
-            print "WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName) ,self.meteoDataStore[parameterName]
+            self.CLASSPRINT("WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName) ,self.meteoDataStore[parameterName])
 
 
     '''
@@ -417,7 +436,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             
         ftxt.writelines(headerTextOutput+"\n")
         if self.verbose:
-            print headerTextOutput
+            self.CLASSPRINT(headerTextOutput)
             
         rowId = 0
         indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]
@@ -442,7 +461,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             rowId += 1 
             ftxt.writelines(dataAppendStr+"\n")
             if self.verbose:
-                print dataAppendStr
+                self.CLASSPRINT(dataAppendStr)
         ftxt.close()
 
         
