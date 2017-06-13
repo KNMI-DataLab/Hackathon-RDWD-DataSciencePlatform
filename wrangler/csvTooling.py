@@ -199,7 +199,15 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             print dateStr, '=>', givenDate,';', 
             
         if self.metaCSVdict['hourFormat'] == "hourInterval":
-            hour = float(hourStr.split('-')[0])
+            try:
+                if '-' in hourStr:
+                    hour = float(hourStr.split('-')[0])
+                else:
+                    hour = float(hourStr[:3])
+            except:
+                self.CLASSPRINT(' ERROR hour extraction from: "%s"' %(hourStr) )
+                return None  # this mean INVALID request
+                
             if self.verbose:
                 print hourStr, '=>', hour,';', 
             minute = int(minuteStr)
@@ -267,8 +275,12 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             print "Decoding date-time format..."
         for aa in self.dataColumns:
             utcTimeStr = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
-            dataRow = [ idCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
-            queryDataArray.append( dataRow )
+            if utcTimeStr==None:  # None means INVALID request!
+                dataRow = [ idCounter, "INVALID", float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
+                queryDataArray.append( dataRow )
+            else:
+                dataRow = [ idCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
+                queryDataArray.append( dataRow )
             idCounter += 1
         queryDataNPA = np.array(queryDataArray)
         #print queryDataArray
@@ -279,6 +291,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
         self.minDateTime = queryDataNPADateTimeSorted[0,1]
         self.maxDateTime = queryDataNPADateTimeSorted[-1,1]
+        printProgress("*******************************************")
+        printProgress("***** Computing LON-LAT STARTED.     ******")
+        printProgress("*******************************************")       
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
         # [  [id, utc-time, X-coord, Y-coord ], .. ]
@@ -292,6 +307,10 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.llbox_east = np.max(longitudes)
         self.llbox_north = np.max(latitudes)
         self.llbox_south = np.min(latitudes)
+        printProgress("*******************************************")
+        printProgress("***** Computing LON-LAT FINISHED.    ******")
+        printProgress("*******************************************")
+        
         print "##########################################################"
         print "minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)       
         print "LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south)
@@ -306,6 +325,33 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             for i in xrange(10):
                 print list(self.queryDataNPAdtsLL[i,:])
         return
+
+    def GetTimeRangeOfData(self):
+        '''
+        Return json: {  "minDateTime": "2006-01-03 00:10:00 UTC",
+                        "maxDateTime": "2006-01-30 08:57:00 UTC" }
+        Note: The actual range is compute in function: ReadInputCSV()
+        '''
+        dataRange =  {  "minDateTime": self.minDateTime,
+                        "maxDateTime": self.maxDateTime }
+        return dataRange
+    
+    def GetLatLonBBOXOfData(self):
+        '''
+        Return json: {  "west": 4.0161296310787549,
+                        "east": 6.8340902374793098,
+                        "north": 50.304600877017236,
+                        "south": 48.4668502279617
+                     }
+        Note: The actual range is compute in function: ReadInputCSV()
+        '''
+        LATLONBBOX =  { "west": self.llbox_west,
+                        "east": self.llbox_east,
+                        "north": self.llbox_north,
+                        "south": self.llbox_south
+                     }
+        return LATLONBBOX
+        
 
     def UnProject2LongitudeLatitudes(self, xcoords, ycoords):
         LL  = self.projectionFunction(xcoords, ycoords,inverse=True)
@@ -362,14 +408,17 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         n = self.numHeaderLines
         ftxt = open(self.outputCSVfile,"wt")
         headerTextOutput = self.headerText[:].rstrip('\n')
+        
         if exportLonLat:
             headerTextOutput += ",longitude,latitude"
         meteoDataStoreKeys =  self.meteoDataStore.keys()
         for k in meteoDataStoreKeys:
             headerTextOutput += ",%s" %k
+            
         ftxt.writelines(headerTextOutput+"\n")
         if self.verbose:
-            print headerTextOutput        
+            print headerTextOutput
+            
         rowId = 0
         indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]
         for dc in self.dataColumns:
