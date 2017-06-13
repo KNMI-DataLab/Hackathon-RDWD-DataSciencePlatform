@@ -32,7 +32,7 @@ def printProgress(infoStr, log=True):
 geoTransfWGS84 = Geod(ellps='WGS84')
 geoTransf = geoTransfWGS84
 
-class cvsDataObject():
+class csvDataObject():
 
     def VerboseOn(self):
         self.verbose=True

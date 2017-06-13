@@ -63,16 +63,16 @@ if __name__ == "__main__":
                           epilog="")
 
     parser.add_option("--inputCSV", dest="inputCSV", metavar="STRING", default="",
-                      help="Input CVS data of the user of the platform.")
+                      help="Input CSV data of the user of the platform.")
 
     parser.add_option("--metaCSV", dest="metaCSV", metavar="STRING", default="",
-                      help="Metadata describing the input CVS data in JSON format.")
+                      help="Metadata describing the input CSV data in JSON format.")
     
     parser.add_option("--jobDesc", dest="jobDesc", metavar="STRING", default="",
                       help="Job describtion in JSON format.")
 
     parser.add_option("--outputCSV", dest="outputCSV", metavar="STRING", default="",
-                      help="Output CVS data.")
+                      help="Output CSV data.")
 
     parser.add_option("--limitTo", dest="limitTo", metavar='N', type=int, default=-1,
                       help="Used to quickly wrangler just a few lines of the user input.")
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         printProgress("ERROR: inputCSV does NOT exists! %s " %(options.inputCSV))
         sys.exit(1)
         
-    csvDataObj = csvT.cvsDataObject()
+    csvDataObj = csvT.csvDataObject()
     csvDataObj.SetInputCSVFile(options.inputCSV)
     csvDataObj.SetInputMetaCSVFile(options.metaCSV)
     csvDataObj.SetJobDescriptionFile(options.jobDesc)
