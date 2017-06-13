@@ -15,18 +15,21 @@
 #* Project    : Science Platform Project
 #*
 #*
-#* Developers:  Michal Koutek
+#* Developers:  MikoKNMI
 #* Initial date:  20170612
 #**********************************************************************
 '''
 [sciencePlatform/wrangler] >
 
+TEST-JOB:
 python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData100lines.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
 meld data/ExportOngevalsData10lines.csv output/meteoDataAdded.csv
 
-python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv 
+FULL-JOB:
 python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
 
+PREVIEW-JOB:
+python wrangleCSV-NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv 
 
 '''
 

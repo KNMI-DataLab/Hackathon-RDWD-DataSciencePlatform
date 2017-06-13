@@ -4,7 +4,7 @@ import pprint
 
 
 import json
-import jsonSyntaxTester as jsTstr
+#import jsonSyntaxTester as jsTstr
 
 
 JsonEncodingType = "utf-8"
@@ -126,15 +126,15 @@ def ReadJsonConfigurationFromFile(jsonFileName):
     if not MISSING_LIB_commentjson:
         jsonStr= ''.join(jsonLines)
         #print jsonStr
-        #jsTstr.checkJsonValidity(jsonStringOrDict, handlePrintFunc=None, _hookObject=None)
-        if not jsTstr.checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
+        #checkJsonValidity(jsonStringOrDict, handlePrintFunc=None, _hookObject=None)
+        if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
             w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
             #sys.exit(1)
             return None
         try:
-            w3dxConfigDict = commentjson.loads(jsonStr, encoding=jsTstr.JsonEncodingType, object_hook=_decode_dict)
+            w3dxConfigDict = commentjson.loads(jsonStr, encoding=JsonEncodingType, object_hook=_decode_dict)
         except Exception as eStr:
-            exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), jsTstr.enumerateLines( str(jsonStr) ))
+            exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), enumerateLines( str(jsonStr) ))
             (jsonOK, errMsg) = (False, exceptionStr)
             printHandleJsonValidity(jsonOK, errMsg)
             sys.exit(1)
@@ -149,15 +149,15 @@ def ReadJsonConfigurationFromFile(jsonFileName):
                 jsonStr += ln
                         
         #  print jsonStr
-        if not jsTstr.checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
+        if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
             w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
             #print "ERROR: jsonStr is NOT VALID JSON!\n"
             sys.exit(1)
             #return None
         try:
-            w3dxConfigDict = json.loads(jsonStr, encoding=jsTstr.JsonEncodingType, object_hook=_decode_dict)
+            w3dxConfigDict = json.loads(jsonStr, encoding=JsonEncodingType, object_hook=_decode_dict)
         except Exception as eStr:
-            exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), jsTstr.enumerateLines( str(jsonStr) ))
+            exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s" % (str(type(jsonStr)), str(eStr), enumerateLines( str(jsonStr) ))
             (jsonOK, errMsg) = (False, exceptionStr)
             printHandleJsonValidity(jsonOK, errMsg)
             sys.exit(1)
@@ -171,3 +171,50 @@ def WriteJsonToFile(jsonLines, jsonFileName):
     jsonFileOUT.write(jsonLines)
     jsonFileOUT.close()
 
+def checkJsonValidity(jsonStringOrDict, handlePrintFunc=None, _hookObject=None):
+    exceptionStr = ""
+    jsonOK = True
+    if type(jsonStringOrDict) == type({}):
+        # It is a (python) dictionary ...
+        try:
+            jsonString = json.dumps(jsonStringOrDict, encoding=JsonEncodingType)
+            if _hookObject==None:
+                jsonDict   = json.loads(jsonString)
+            else:
+                jsonDict   = json.loads(jsonString,object_hook=_hookObject)
+            jsonOK = True
+        except Exception as eStr:
+            exceptionStr = "Cannot construct JSON  from: type=%s;\nException: %s;\ngiven = %s;" % (str(type(jsonStringOrDict)), str(eStr), enumerateLines( str(jsonStringOrDict) ))
+            
+            (jsonOK, errMsg) = (False, exceptionStr)
+    else:
+        # It is a NOT dictionary ...
+        if not ( (type("a") == type(jsonStringOrDict)) or (type(u'a') == type(jsonStringOrDict)) ):
+            exceptionStr = "Cannot construct JSON from: type=%s;\ngiven=%s" %(str(type(jsonStringOrDict)), enumerateLines( str(jsonStringOrDict) ))
+            jsonOK = False
+        else:
+            # Given object is a JSON STRING
+            jsonString = jsonStringOrDict
+            try:
+                if _hookObject==None:
+                    jsonDict = json.loads(jsonString, encoding=JsonEncodingType)
+                else:
+                    jsonDict = json.loads(jsonString, encoding=JsonEncodingType, object_hook=_hookObject)
+
+                jsonOK = True
+            except Exception as eStr0:
+                try:
+                    # Java-styled Json strings give sometimes exceptions
+                    jsonDict = eval(jsonString) # Therefore use here eval instead of json.loads()
+                    jsonString = json.dumps(jsonDict, encoding=JsonEncodingType)
+                    if _hookObject==None:
+                        jsonDict = json.loads(jsonString, encoding=JsonEncodingType)
+                    else:
+                        jsonDict = json.loads(jsonString, encoding=JsonEncodingType, object_hook=_hookObject)
+                except Exception as eStr1:
+                    exceptionStr = "Cannot construct JSON from: type=%s;\nException0: %s;\nException1: %s;\ngiven = %s;" % (str(type(jsonStringOrDict)), str(eStr0), str(eStr1), enumerateLines( str(jsonStringOrDict) ))
+                    jsonOK = False
+
+    if handlePrintFunc:
+        handlePrintFunc(jsonOK, exceptionStr)
+    return jsonOK

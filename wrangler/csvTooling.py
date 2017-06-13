@@ -91,7 +91,8 @@ class cvsDataObject():
             print(os.path.dirname(full_path))        
 
     def __del__(self):
-        self.CLASSPRINT('..Destructor()..')
+        #self.CLASSPRINT('..Destructor()..')
+        pass
 
     def checkFile(self, fname, infoStr):
         if os.path.exists(fname):
@@ -186,18 +187,21 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         datetime_in_utc    = datetime_with_tz.astimezone(pytz.utc)
 
-        print datetime_with_tz.strftime(fmt),'=>', datetime_in_utc.strftime(fmt)
+        if self.verbose:
+            print datetime_with_tz.strftime(fmt),'=>', datetime_in_utc.strftime(fmt)
         return datetime_in_utc
         
     def DecodeDateTime(self, dateStr, hourStr, minuteStr):
         if self.metaCSVdict['dateFormat'] == "%d%b%y":
             givenDate = datetime.strptime(dateStr, "%d%b%y")
             #analysisTime = datetime.strptime(specs['tag']['starttime'], "%Y%m%d%H")
-        print dateStr, '=>', givenDate,';', 
+        if self.verbose:
+            print dateStr, '=>', givenDate,';', 
             
         if self.metaCSVdict['hourFormat'] == "hourInterval":
             hour = float(hourStr.split('-')[0])
-            print hourStr, '=>', hour,';', 
+            if self.verbose:
+                print hourStr, '=>', hour,';', 
             minute = int(minuteStr)
             
         localTime = givenDate + timedelta(hours=hour, minutes=minute)
@@ -210,7 +214,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
     def ReadInputCSV(self):
         self.CLASSPRINT(' reading metaCSVfile: %s' %(self.metaCSVfile) )
         self.metaCSVdict = jst.ReadJsonConfigurationFromFile(self.metaCSVfile)
-        print self.metaCSVdict
+        if self.verbose:
+            print self.metaCSVdict
         self.delimiter = self.metaCSVdict['csvSeparator']
         self.columnsList = []
         self.columnsList.append(self.metaCSVdict['columnDate'])
@@ -244,17 +249,22 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             self.headerText += ln.rstrip('\n')  
             n -= 1
         ftxt.close()
-        print "headerText=\n*****\n%s"  %(self.headerText); print "*****"
+        if self.verbose:
+            print "headerText=\n*****\n%s"  %(self.headerText); print "*****"
         self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines, comments="#", dtype="|S300",  delimiter=self.delimiter)                      
         if self.limitTo>0:
             self.dataColumns = self.dataUnsortedStr[:self.limitTo, self.columnsList ]
-            pprint.pprint(self.dataColumns) 
+            if self.verbose:
+                #pprint.pprint(self.dataColumns) 
+                print self.dataColumns
         else:
             self.dataColumns = self.dataUnsortedStr[:, self.columnsList ]
         #dataUnsorted = dataUnsortedStr.astype(dtype=[('date', str), ('time', str), ('id', str), ('lon', float), ('lat', float), ('flightlevel', float) , ('windSpeed', float), ('windDirection', float), ('temp', float), ('flightphase', str)  ])
         #20131028 040029 M83240b 51.3094 1.0316 350.00 120.078 236.942 222.326 0
         queryDataArray = []
         idCounter = 0
+        if self.verbose:
+            print "Decoding date-time format..."
         for aa in self.dataColumns:
             utcTimeStr = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
             dataRow = [ idCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
@@ -266,11 +276,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         # SORT ACCORDING THE UCT-TIME:
         ind = np.lexsort((queryDataNPA[:,1],))
         queryDataNPADateTimeSorted = queryDataNPA[ind]
-        print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
+        #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
         self.minDateTime = queryDataNPADateTimeSorted[0,1]
         self.maxDateTime = queryDataNPADateTimeSorted[-1,1]
-        print "minDateTime=%s, maxDateTime=%s\n" %(self.minDateTime, self.maxDateTime)
-
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
         # [  [id, utc-time, X-coord, Y-coord ], .. ]
@@ -279,19 +287,24 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         (longitudes,latitudes) = self.UnProject2LongitudeLatitudes(xcoords, ycoords)
         lonLatStacked = np.vstack((longitudes,latitudes)).T
-        print lonLatStacked
+        #print lonLatStacked
         self.llbox_west = np.min(longitudes)
         self.llbox_east = np.max(longitudes)
         self.llbox_north = np.max(latitudes)
         self.llbox_south = np.min(latitudes)
+        print "##########################################################"
+        print "minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)       
         print "LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south)
+        print "##########################################################"
         #print "queryDataNPADateTimeSorted.shape=", queryDataNPADateTimeSorted[:,0].shape
         #print "longitudes.shape=", longitudes.shape
         self.queryDataNPAdtsLL = np.vstack(( queryDataNPADateTimeSorted[:,0], queryDataNPADateTimeSorted[:,1], 
                                         queryDataNPADateTimeSorted[:,2], queryDataNPADateTimeSorted[:,3], 
                                         longitudes,latitudes)).T
-        for i in xrange(10):
-            print list(self.queryDataNPAdtsLL[i,:])
+        if self.verbose:
+            print "queryDataNPADateTimeSorted:"
+            for i in xrange(10):
+                print list(self.queryDataNPAdtsLL[i,:])
         return
 
     def UnProject2LongitudeLatitudes(self, xcoords, ycoords):
@@ -316,13 +329,14 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             
     def WrangleMeteoParameter(self, parameterName):
         dims = self.queryDataNPAdtsLL.shape
-        print "self.queryDataNPAdtsLL.shape=",self.queryDataNPAdtsLL.shape
+        #print "self.queryDataNPAdtsLL.shape=",self.queryDataNPAdtsLL.shape
         #self.meteoDataStore[parameterName] = np.array(np.ones(dims[0]))
         if "temp" in parameterName:
             self.meteoDataStore[parameterName] = np.random.uniform(low=273.15, high=280, size=(dims[0],))
         else:
             self.meteoDataStore[parameterName] = np.random.uniform(low=0.0, high=100.0, size=(dims[0],))
-        print "meteoDataStore[%s]="%(parameterName) ,self.meteoDataStore[parameterName]
+        if self.verbose:
+            print "WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName) ,self.meteoDataStore[parameterName]
 
 
     '''
@@ -354,6 +368,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         for k in meteoDataStoreKeys:
             headerTextOutput += ",%s" %k
         ftxt.writelines(headerTextOutput+"\n")
+        if self.verbose:
+            print headerTextOutput        
         rowId = 0
         indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]
         for dc in self.dataColumns:
@@ -376,7 +392,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             
             rowId += 1 
             ftxt.writelines(dataAppendStr+"\n")
-            print dataAppendStr
+            if self.verbose:
+                print dataAppendStr
         ftxt.close()
 
         
