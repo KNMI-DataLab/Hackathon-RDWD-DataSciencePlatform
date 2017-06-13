@@ -13,6 +13,6 @@ example) and add the wps subdirectory (dsp_wps/wps).
 1. For now, copy the example files under dsp_wps/wps/wrangler/data/ to the
 the basket directory: ${ADAGUCSERVICES}/data/adaguc-services-space/<user>/data
 1. Run the adaguc-service from Eclipse/IntelliJ/whatever.
-1. Enter the following URL replacing <yourhostname>:
-> https://<yourhostname>:8090/wps?service=wps&reqest=Execute&identifier=wrangleProcess&version=1.0.0&DataInputs=inputCSVPath=ExportOngevalsData100lines.csv;metaCSVPath=metaDataCsv.json;jobDescPath=jobDesc.json
+1. Enter the following URL replacing yourhostname:
+> https://yourhostname:8090/wps?service=wps&reqest=Execute&identifier=wrangleProcess&version=1.0.0&DataInputs=inputCSVPath=ExportOngevalsData100lines.csv;metaCSVPath=metaDataCsv.json;jobDescPath=jobDesc.json
 
