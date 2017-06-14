@@ -216,6 +216,12 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
 
         
     def DecodeDateTime(self, dateStr, hourStr, minuteStr):
+        """
+        Called in ReadInputCSV in a loop for every record.
+        This routine converts local time stamps in the CSV to UTC.
+        TODO: If the time is already in UTC, this might not work.
+        TODO: throw exception if we cannot convert because of unsupported date/time format.
+        """
         if self.metaCSVdict['dateFormat'] == "%d%b%y":
             givenDate = datetime.strptime(dateStr, "%d%b%y")
             #analysisTime = datetime.strptime(specs['tag']['starttime'], "%Y%m%d%H")
@@ -255,6 +261,11 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         return utcTimeStr
     
     def ReadInputCSV(self):
+        """
+        Read and scan the input CSV. convert time stamps to UTC.
+        When this function returns successfully, we have all information to
+        create metadata JSON file.
+        """
         self.CLASSPRINT('reading metaCSVfile: %s' %(self.metaCSVfile) )
         self.metaCSVdict = jst.ReadJsonConfigurationFromFile(self.metaCSVfile)
         if self.verbose:
@@ -294,16 +305,19 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         ftxt.close()
         if self.verbose:
             self.CLASSPRINT( "headerText=\n%s"  %(self.headerText))
+        ## dtype is important. The statement below reads in the entire CSV into
+        ## a 2 dimensional numpy array where every element is a 300 character string.
         self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines, comments="#", dtype="|S300",  delimiter=self.delimiter)                      
         if self.limitTo>0:
+            ## self.dataColumns is a 2 dimensional array of strings with only the requested columns from columnsList.
             self.dataColumns = self.dataUnsortedStr[:self.limitTo, self.columnsList ]
             if self.verbose and self.verboseLevel>=10:
                 #pprint.pprintProgress(self.dataColumns) 
                 self.CLASSPRINT( "dataColumns:\n", self.dataColumns )
         else:
             self.dataColumns = self.dataUnsortedStr[:, self.columnsList ]
-        #dataUnsorted = dataUnsortedStr.astype(dtype=[('date', str), ('time', str), ('id', str), ('lon', float), ('lat', float), ('flightlevel', float) , ('windSpeed', float), ('windDirection', float), ('temp', float), ('flightphase', str)  ])
-        #20131028 040029 M83240b 51.3094 1.0316 350.00 120.078 236.942 222.326 0
+
+        ## This would be a good location to call the WPS status callback function.
         self.CLASSPRINT("*******************************************")
         self.CLASSPRINT("***** Decoding date-time format STARTED. **")
         self.CLASSPRINT("*******************************************")
@@ -323,20 +337,27 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 dataRow = [ idCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
                 queryDataArray.append( dataRow )
             idCounter += 1
+            
+        ## Translate the python list to a 2 dimensional numpy array of [ [id, utc-time, X-coord, Y-coord], ... ]
         queryDataNPA = np.array(queryDataArray)
+
+        # uncomment for debugging
         #print queryDataArray
         #print "queryDataNPA=\n", queryDataNPA
+
         # SORT ACCORDING THE UCT-TIME:
-        ind = np.lexsort((queryDataNPA[:,1],))
-        queryDataNPADateTimeSorted = queryDataNPA[ind]
+        ind = np.lexsort((queryDataNPA[:,1],)) ## create sorted list of indices. ':' => vertical dimension
+        queryDataNPADateTimeSorted = queryDataNPA[ind] ## create sorted 2-dimensional array
         #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
         self.minDateTime = queryDataNPADateTimeSorted[0,1]
+        
         # There might be missing/unspecified HOURS in the user-csv data.
         # These are marked as INVALID as lexically sorted appearing at the of the array.
         utcTimeStr_last = queryDataNPADateTimeSorted[-1,1]
         if utcTimeStr_last!="INVALID":
             self.maxDateTime = utcTimeStr_last
         else:
+            ## Find the first non-invalid time from the last record upwards
             lastPos = -2
             try:
                 utcTimeStr_last = queryDataNPADateTimeSorted[lastPos,1]
@@ -357,13 +378,15 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT("*******************************************")       
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
-        # [  [id, utc-time, X-coord, Y-coord ], .. ]
-        xcoords = queryDataNPADateTimeSorted[:,2]
-        ycoords = queryDataNPADateTimeSorted[:,2]
+        # 2-dimensional numpy array [  [id, utc-time, X-coord, Y-coord ], .. ] sorted by utc time
+        xcoords = queryDataNPADateTimeSorted[:,2] ## still a 1-dimensional numpy array of strings
+        ycoords = queryDataNPADateTimeSorted[:,3] ## still a 1-dimensional numpy array of strings
         
         (longitudes,latitudes) = self.UnProject2LongitudeLatitudes(xcoords, ycoords)
         lonLatStacked = np.vstack((longitudes,latitudes)).T
         #print lonLatStacked
+
+        ## Determine the bounding box.
         self.llbox_west = np.min(longitudes)
         self.llbox_east = np.max(longitudes)
         self.llbox_north = np.max(latitudes)
@@ -378,6 +401,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT( "##########################################################")
         #print "queryDataNPADateTimeSorted.shape=", queryDataNPADateTimeSorted[:,0].shape
         #print "longitudes.shape=", longitudes.shape
+
+        # 2-dimensional numpy array [  [id, utc-time, X-coord, Y-coord, longitude, latitude ], .. ] sorted by utc time
         self.queryDataNPAdtsLL = np.vstack(( queryDataNPADateTimeSorted[:,0], queryDataNPADateTimeSorted[:,1], 
                                         queryDataNPADateTimeSorted[:,2], queryDataNPADateTimeSorted[:,3], 
                                         longitudes,latitudes)).T
