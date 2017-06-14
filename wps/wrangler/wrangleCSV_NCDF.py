@@ -208,7 +208,9 @@ class dataWranglerProcessor():
             printProgress("ERROR: Initialize first!")
             return
         return self.csvDataObj.GetLatLonBBOXOfData()
-        
+
+    def GetProjectionString(self):
+        return self.csvDataObj.GetProjectionString()
         
     def WrangleWithNetCdfData(self, argsDict):
         '''

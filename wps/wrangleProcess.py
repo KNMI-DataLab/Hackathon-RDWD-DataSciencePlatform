@@ -53,13 +53,13 @@ class WrangleProcess(WPSProcess):
         dwp_dict = {"inputCSV":pathToBasket+"/../"+inputCSVPath,
                     "metaCSV":pathToBasket+"/../"+metaCSVPath,
                     "jobDesc":pathToBasket+"/../"+jobDescPath,
-                    "outputCSV":pathToBasket+outputFileName,
+                    "logFile":pathToBasket+inputCSVPath_t[0]+".log",
                     "limitTo":limit}
         try:
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
             dwp.ReadInputCSV()
-            dwp.WrangleWithNetCdfData()
+            dwp.WrangleWithNetCdfData({"outputCSV":pathToBasket+outputFileName})
         except Exception, e:
             self.status.set(e, 500)
             raise Exception(e)
