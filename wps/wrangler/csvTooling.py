@@ -410,7 +410,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         self.CLASSPRINT("*******************************************")
         self.CLASSPRINT("***** Computing LON-LAT STARTED.     ******")
-        self.CLASSPRINT("*******************************************")       
+        self.CLASSPRINT("*******************************************")
+        
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
         # 2-dimensional numpy array [  [id, utc-time, X-coord, Y-coord ], .. ] sorted by utc time
@@ -473,6 +474,11 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                         "south": self.llbox_south
                      }
         return LATLONBBOX
+
+    def GetProjectionString(self):
+        if not self.metaCSVdict:
+            return None
+        return self.projFuncDefstring
         
 
     def UnProject2LongitudeLatitudes(self, xcoords, ycoords):
