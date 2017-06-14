@@ -236,7 +236,12 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 if self.autoResolve_hour>0:
                     hour = self.autoResolve_hour
                 else:
-                    self.CLASSPRINT('WARNING: could not extract hour from: "%s"' %(hourStr) )
+                    try:
+                        minute = int(minuteStr)
+                        self.CLASSPRINT('WARNING: could not extract (hour) from: "(%s)"' %(hourStr) )
+                    except:
+                        self.CLASSPRINT('WARNING: could not extract (hour & minute) from: "(%s,%s)"' %(hourStr,minuteStr) )
+                    
                     return None  # this mean INVALID request
 
             try:
@@ -305,9 +310,16 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         ftxt.close()
         if self.verbose:
             self.CLASSPRINT( "headerText=\n%s"  %(self.headerText))
+        
+        self.CLASSPRINT("*******************************************")
+        self.CLASSPRINT("***** Reading CSV-file STARTED.   *********")
+        self.CLASSPRINT("*******************************************")
+
         ## dtype is important. The statement below reads in the entire CSV into
         ## a 2 dimensional numpy array where every element is a 300 character string.
+        
         self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines, comments="#", dtype="|S300",  delimiter=self.delimiter)                      
+        self.CLASSPRINT("***** Extracting data columns...  *********")
         if self.limitTo>0:
             ## self.dataColumns is a 2 dimensional array of strings with only the requested columns from columnsList.
             self.dataColumns = self.dataUnsortedStr[:self.limitTo, self.columnsList ]
@@ -316,17 +328,39 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 self.CLASSPRINT( "dataColumns:\n", self.dataColumns )
         else:
             self.dataColumns = self.dataUnsortedStr[:, self.columnsList ]
+            if self.verbose and self.verboseLevel>=10:
+                self.PrintArray(self.dataColumns, arrayName="self.dataColumns")
+
+        self.CLASSPRINT("*******************************************")
+        self.CLASSPRINT("***** Reading CSV-file FINISHED.  *********")
+        self.CLASSPRINT("*******************************************")
 
         ## This would be a good location to call the WPS status callback function.
         self.CLASSPRINT("*******************************************")
         self.CLASSPRINT("***** Decoding date-time format STARTED. **")
         self.CLASSPRINT("*******************************************")
-        idCounter = 0
-        queryDataArray = []
 
-        #[wps/wrangler] >cat data/ExportOngevalsData.csv | grep Onbekend| wc -l
-        #33656
+        '''
+        [wps/wrangler] >cat data/ExportOngevalsData.csv | grep Onbekend| wc -l
+        33656 .. there are diffrent places (columns) where "Onbekend" is...
+        ..
+        Ongeval exact gekoppeld aan BN,8.00-08.59,22JAN07,13,Letsel,0,0,Onbekend,Kruispunt,258737,471220,1,0,1,0
+        Ongeval exact gekoppeld aan BN,22.00-22.59,18JAN07,0,Letsel,0,0,Onbekend,Kruispunt,75750,453134,1,0,0,0
+        Ongeval exact gekoppeld aan BN,8.00-08.59,05FEB07,33,Letsel,0,0,Onbekend,Kruispunt,169835,482830,1,0,1,0
+        Ongeval exact gekoppeld aan BN,17.00-17.59,03FEB07,31,Letsel,0,0,Onbekend,Kruispunt,145169,456460,1,0,0,0
+        ..
+        Ongeval exact gekoppeld aan BN,Onbekend,29JAN07,Onbekend,Letsel,0,0,Flank,Kruispunt,254097,569483,1,0,1,0
+        Ongeval exact gekoppeld aan BN,Onbekend,05FEB07,Onbekend,Letsel,0,0,Frontaal,Wegvak,129124.252,426803.097,0,1,1,0        
         
+        .. practically only 55 (=46+9) are related to HOUR and MINUTE specification ..
+        [bhwatx2] [wrangler/data] >grep BN,Onbekend ExportOngevalsData.csv | wc -l
+        46
+        [bhwatx2] [wrangler/data] >grep niveau,Onbekend ExportOngevalsData.csv | wc -l
+        9        
+        '''
+
+        idCounter = 0
+        queryDataArray = []        
         for aa in self.dataColumns:
             utcTimeStr = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
             if utcTimeStr==None:  # None means INVALID request!
@@ -482,17 +516,19 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
     ['4', '2006-01-09 17:09:00 UTC', '190371.475', '324748.091', '5.87787666049', '49.7043104226']
     ['6', '2006-01-12 16:57:00 UTC', '174487.0', '318218.0', '5.6569228243', '49.5622693229']
     '''
+    
+    
     def PrintArray(self,arr, arrayName=""):
         dims = arr.shape
-        print "%s%s =" %(arrayName, str(list(dims)))
+        printProgress( "%s%s =" %(arrayName, str(list(dims))) )
         for i in xrange(dims[0]):
-            print list(arr[i])
+            printProgress( str( list(arr[i]) ) )
             
     def PrintArrayJoinedAsString(self,arr, arrayName="", delimiter=","):
         dims = arr.shape
-        print "%s%s =" %(arrayName, str(list(dims)))
+        printProgress( "%s%s =" %(arrayName, str(list(dims))) )
         for i in xrange(dims[0]):
-            print delimiter.join( list(arr[i]) )
+            printProgress( delimiter.join( list(arr[i]) ) )
 
             
     def ProduceOutput(self, exportLonLat = True):
@@ -536,10 +572,11 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         queryDataNPAdtsLLIdxSorted = self.queryDataNPAdtsLL[indexSort]
         indicesqueryDataNPAdtsLLIdxSorted =  (queryDataNPAdtsLLIdxSorted[:,0]).astype(np.int)
         #print "indicesqueryDataNPAdtsLLIdxSorted=", indicesqueryDataNPAdtsLLIdxSorted
-        self.PrintArray(queryDataNPAdtsLLIdxSorted, arrayName="queryDataNPAdtsLLIdxSorted")
-        self.PrintArray(dataOut, arrayName="dataOut")
-        #print "dataOut.shape=", dataOut.shape
         
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArray(queryDataNPAdtsLLIdxSorted, arrayName="queryDataNPAdtsLLIdxSorted")
+            self.PrintArray(dataOut, arrayName="dataOut")
+            #print "dataOut.shape=", dataOut.shape        
         
         meteoDataStoreNpArray = np.array([])
         
@@ -562,14 +599,18 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             else:
                 meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, dataParamArray[indexSort].reshape(dataParamArray.shape[0],1)) )
 
-        self.PrintArray(meteoDataStoreNpArray, arrayName="meteoDataStoreNpArray")       
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArray(meteoDataStoreNpArray, arrayName="meteoDataStoreNpArray")       
         #print "meteoDataStoreNpArray.shape=", meteoDataStoreNpArray.shape
         reassembledResultArray = np.hstack((dataOut,meteoDataStoreNpArray))
         #print "reassembledResultArray.shape=", reassembledResultArray.shape
 
         if onlyTesting:
-            self.PrintArray(reassembledResultArray, arrayName="reassembledResultArray")
-        self.PrintArrayJoinedAsString(reassembledResultArray, arrayName="reassembledResultArray")
+            if self.verbose and self.verboseLevel>=10:          
+                self.PrintArray(reassembledResultArray, arrayName="reassembledResultArray")
+        
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArrayJoinedAsString(reassembledResultArray, arrayName="reassembledResultArray")
         
         #reassembledResultArray = np.hstack( (dataOut,meteoDataStoreList) )
                 

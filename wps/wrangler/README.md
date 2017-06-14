@@ -13,10 +13,63 @@ FULL-JOB:
 python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
 ```
 
+SCAN-JOB:
+
+``` sh
+python wrangleCSV_NCDF.py --scanOnly --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv 
+
+[wps/wrangler] >time python wrangleCSV_NCDF.py --scanOnly --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv
+WARNING: Could not remove file: ./output/meteoDataAddedFull.csv.log
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() reading metaCSVfile: ./data/metaDataCsv.json
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() {'columnMinute': 3, 'dateFormat': '%d%b%y', 'hourFormat': 'hourInterval', 'columnDate': 2, 'columnHour': 1, 'columnY': 10, 'minuteFormat': 'plainMinute', 'csvSeparator': ',', 'projString': '+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +no_defs', 'timeZone': 'CET', 'columnX': 9, 'geoProjection': 'rijksDriehoek'}
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() reading inputCSVfile: ./data/ExportOngevalsData.csv
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() headerText=
+Niveaukop,Uur,datum,minuut,ernong,N_Slacht_dood,N_Slacht_Zh,Aardong,loctypon,X,Y,N_Personenauto,N_Brom_snorfiets,N_Fiets,N_Voetganger
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Reading CSV-file STARTED.   *********
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Extracting data columns...  *********
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Reading CSV-file FINISHED.  *********
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Decoding date-time format STARTED. **
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 23117; "['11DEC06' 'Onbekend' 'Onbekend' '263447.126' '575528.125']"
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 26143; "['29JAN07' 'Onbekend' 'Onbekend' '254097' '569483']"
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 26218; "['05FEB07' 'Onbekend' 'Onbekend' '129124.252' '426803.097']"
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 31084; "['17MAR07' 'Onbekend' 'Onbekend' '255358.694' '570317.558']"
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 32965; "['02APR07' 'Onbekend' 'Onbekend' '260257.384' '557465.849']"
+....
+[21205:wrangleCSV_NCDF.py] csvDataObject.DecodeDateTime() WARNING: could not extract (hour & minute) from: "(Onbekend,Onbekend)"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() WARNING: INVALID date-time specification at row-number: 155686; "['23JAN15' 'Onbekend' 'Onbekend' '112727.557' '478625.286']"
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Decoding date-time format FINISHED.**
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Computing LON-LAT STARTED.     ******
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ***** Computing LON-LAT FINISHED.    ******
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() *******************************************
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ##########################################################
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() minDateTime=2005-12-31 23:14:00 UTC, maxDateTime=2015-12-31 22:38:00 UTC
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() LATLON-BBOX (west, east, north, south):(3.359861046500733, 7.220277659244057, 53.487478565722419, 50.755904620455084)
+[21205:wrangleCSV_NCDF.py] csvDataObject.ReadInputCSV() ##########################################################
+10.404u 4.268s 0:14.68 99.8%	0+0k 0+40io 0pf+0w
+
+```
+
 PREVIEW-JOB:
 
 ``` sh
-python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv 
+python wrangleCSV_NCDF.py            --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv 
+
 ```
 
 ######### TESTING example:  #############
@@ -90,4 +143,6 @@ python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData100lines.csv --met
 > *******************************************
 > ***** Wrangling Processing FINISHED. ******
 > *******************************************
+
+
 

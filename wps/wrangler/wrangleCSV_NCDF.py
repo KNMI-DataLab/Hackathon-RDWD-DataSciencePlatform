@@ -121,18 +121,20 @@ class dataWranglerProcessor():
     def Initialize(self, argsDict):
         '''
         dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
-                      "outputCSV":options.outputCSV, "limitTo": options.limitTo 
+                          "logFile":options.outputCSV+".log",        
+                          "limitTo": options.limitTo,
+                          "verboseLevel" : 10  // 0,1,10 
                     } )
-        limitTo: OPTIONAL parameter                    
+        OPTIONAL parameters:  limitTo, verboseLevel
         '''
-        if not "outputCSV" in argsDict:
-            printProgress("ERROR: outputCSV must be provided! ")
+
+        if not "logFile" in argsDict:
+            printProgress("ERROR: logFile must be provided! ")
             raise ValueError('MISSING-input-file(s)')
         else:
-            self.outputCSV = argsDict["outputCSV"]
-
-        # We will use ${outputCSV}.log instead.
-        csvT.logFileName = self.outputCSV + ".log"
+            self.logFileName = argsDict["logFile"]
+        
+        csvT.logFileName = self.logFileName
         csvT.InitializeWranglerLogger(csvT.logFileName)
         
         if not "inputCSV" in argsDict:
@@ -163,12 +165,16 @@ class dataWranglerProcessor():
             raise ValueError('MISSING-input-file(s)')
             
         self.csvDataObj = csvT.csvDataObject()
+
+        if  "verboseLevel" in argsDict:
+            self.SetVerboseLevel( argsDict["verboseLevel"] )
+            self.csvDataObj.SetVerboseLevel( argsDict["verboseLevel"] )
+        
         self.csvDataObj.SetInputCSVFile(self.inputCSV)
         self.csvDataObj.SetInputMetaCSVFile(self.metaCSV)
         self.csvDataObj.SetJobDescriptionFile(self.jobDesc)
         if not os.path.exists("./output"):
             os.makedirs("./output")
-        self.csvDataObj.SetOutputCSVFile(self.outputCSV)
         self.csvDataObj.ApplyLimit(self.limitTo)
         self.initialized = True
         
@@ -204,10 +210,22 @@ class dataWranglerProcessor():
         return self.csvDataObj.GetLatLonBBOXOfData()
         
         
-    def WrangleWithNetCdfData(self):
+    def WrangleWithNetCdfData(self, argsDict):
+        '''
+           dwp.WrangleWithNetCdfData( { "outputCSV":options.outputCSV } )
+        '''
+        
         if not self.initialized:
             printProgress("ERROR: Initialize first!")
             return
+        
+        if not "outputCSV" in argsDict:
+            printProgress("ERROR: outputCSV must be provided! ")
+            raise ValueError('MISSING-input-file(s)')
+        else:
+            self.outputCSV = argsDict["outputCSV"]
+
+        self.csvDataObj.SetOutputCSVFile(self.outputCSV)
         
         printProgress("*******************************************")
         printProgress("***** Wrangling Processing STARTED.  ******")
@@ -252,34 +270,27 @@ if __name__ == "__main__":
     parser.add_option("-o", "--logfile", dest="logfile", metavar="STRING", default=csvT.defaultLogFile,
                       help="The path and name of the file used by this program for its logging output.")
                       
-    parser.add_option("-l", "--loglevel", dest="loglevel", metavar="STRING", default="info",
+    parser.add_option("-l", "--verboseLevel", dest="verboseLevel", metavar='N', type=int, default=0,
                       help="The level of logging used by this program.")
+                      
+    parser.add_option("--scanOnly", dest="scanOnly", action="store_true", default=False,
+                      help="Perform SCAN-ONLY action on CSV data.")
                                             
     (options, args) = parser.parse_args()
 
-    # Translate the logger settings from the command line and apply them.
-    if options.loglevel == "debug":
-        #print "logging.DEBUG"
-        loglevel = logging.DEBUG
-    elif options.loglevel == "info":
-        loglevel = logging.INFO
-    elif options.loglevel == "warn":
-        loglevel = logging.WARN
-    elif options.loglevel == "error":
-        loglevel = logging.ERROR
-    elif options.loglevel == "fatal":
-        loglevel = logging.FATAL
         
     csvT.logFileName = options.logfile[:]
     
-
     try:
         dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
-                          "outputCSV":options.outputCSV, "limitTo": options.limitTo 
-                        } )
-        #dwp.csvDataObj.SetVerboseLevel(10)
+                          "logFile":options.outputCSV+".log", 
+                          #"logFile": csvT.logFileName,                          
+                          "limitTo": options.limitTo,
+                          "verboseLevel": options.verboseLevel
+                        } )    
         dwp.ReadInputCSV()
-        dwp.WrangleWithNetCdfData()
+        if not options.scanOnly:
+            dwp.WrangleWithNetCdfData( { "outputCSV":options.outputCSV } )
 
         #Possible exceptions raised:
         #raise ValueError('JSON-INVALID')
