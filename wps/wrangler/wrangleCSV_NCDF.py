@@ -277,7 +277,7 @@ if __name__ == "__main__":
         dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
                           "outputCSV":options.outputCSV, "limitTo": options.limitTo 
                         } )
-        dwp.csvDataObj.SetVerboseLevel(10)
+        #dwp.csvDataObj.SetVerboseLevel(10)
         dwp.ReadInputCSV()
         dwp.WrangleWithNetCdfData()
 
