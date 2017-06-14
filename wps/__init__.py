@@ -1,1 +1,1 @@
-__all__ = ["wrangleProcess"]
+__all__ = ["wrangleProcess", "scanCSVProcess"]
