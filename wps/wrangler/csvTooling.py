@@ -502,8 +502,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             self.meteoDataStore[parameterName] = np.random.uniform(low=273.15, high=280, size=(dims[0],))
         else:
             self.meteoDataStore[parameterName] = np.random.uniform(low=0.0, high=100.0, size=(dims[0],))
-        #if self.verbose:
-        #    self.CLASSPRINT("WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName) ,self.meteoDataStore[parameterName])
+        if self.verbose:
+            self.CLASSPRINT("WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName),self.meteoDataStore[parameterName].shape)
 
 
     '''
@@ -547,9 +547,6 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             else:
                 dataOut = self.dataUnsortedStr
         
-        # write the header
-        n = self.numHeaderLines
-        ftxt = open(self.outputCSVfile,"wt")
         headerTextOutput = self.headerText[:].rstrip('\n')
         
         if exportLonLat:
@@ -557,10 +554,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         meteoDataStoreKeys =  self.meteoDataStore.keys()
         for k in meteoDataStoreKeys:
             headerTextOutput += ",%s" %k
-            
-        ftxt.writelines(headerTextOutput+"\n")
-        if self.verbose:
-            printProgress(headerTextOutput)
+
+        self.CLASSPRINT(' Working on reassembledResultArray..' )
             
         rowId = 0
         # NOTE: The array is sorted according DATE-TIME
@@ -585,15 +580,18 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
 
         #self.PrintArray(lonNpArrayIdxSorted, arrayName="lonNpArrayIdxSorted")
         #self.PrintArray(latNpArrayIdxSorted, arrayName="latNpArrayIdxSorted")
-        
+
         # add longitude
+        self.CLASSPRINT(' Adding result array: %s' %('longitude') )
         meteoDataStoreNpArray = lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)
         # add latitude
+        self.CLASSPRINT(' Adding result array: %s' %('latitude') )
         meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, latNpArrayIdxSorted.reshape(latNpArrayIdxSorted.shape[0],1)) )
        
         for k in meteoDataStoreKeys:
             dataParamArray = self.meteoDataStore[k]
             #print "meteoDataStore[k=%s]: dataParamArray.shape="%k, dataParamArray.shape
+            self.CLASSPRINT(' Adding result array: %s' %(k) )            
             if  meteoDataStoreNpArray.size==0:
                 meteoDataStoreNpArray = dataParamArray[indexSort].reshape(dataParamArray.shape[0],1)
             else:
@@ -622,8 +620,13 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #for rowId in indicesqueryDataNPAdtsLLIdxSorted:
         
         if onlyTesting:
-            ## Slower version to CONTROL the above results
-            printProgress("** Control procedure: should give same as above .. ***")
+            printProgress("** Slower control procedure: should give same as above .. ***")
+            # write the header
+            ftxt = open(self.outputCSVfile,"wt")           
+            ftxt.writelines(headerTextOutput+"\n")
+            if self.verbose:
+                printProgress(headerTextOutput)
+            
             for dc in self.dataColumns:
                 rowIdStr = "%d"%rowId
                 indexResults = np.where(indicesqueryDataNPAdtsLL == rowIdStr)
@@ -647,10 +650,13 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 ftxt.writelines(dataAppendStr+"\n")
                 if self.verbose and self.verboseLevel>=10:
                     printProgress(dataAppendStr)
-                    
-        ftxt.close()
+            ftxt.close()
+            # time: 188.356u 6.136s 3:14.50 99.9%	0+0k 0+38384io 0pf+0w
+        else:
+            self.CLASSPRINT(' Writing reassembledResultArray: to the output file..')            
+            np.savetxt(self.outputCSVfile, reassembledResultArray, fmt='%s', delimiter=self.delimiter, comments='', header=headerTextOutput)
+            # time: 11.780u 6.344s 0:18.13 99.9%	0+0k 0+50240io 0pf+0w
 
-        
 
     def Distance2pointsInLonLat(self, lng1,lat1,lng2,lat2):
         #global geoTransfWGS84
