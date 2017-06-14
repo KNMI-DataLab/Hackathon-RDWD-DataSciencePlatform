@@ -379,9 +379,10 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #print queryDataArray
         #print "queryDataNPA=\n", queryDataNPA
 
-        # SORT ACCORDING THE UCT-TIME:
-        ind = np.lexsort((queryDataNPA[:,1],)) ## create sorted list of indices. ':' => vertical dimension
-        queryDataNPADateTimeSorted = queryDataNPA[ind] ## create sorted 2-dimensional array
+        # SORT ACCORDING THE UTC-TIME:
+        self.sortedIndexUtcTime = np.lexsort((queryDataNPA[:,1],)) ## create sorted list of indices. ':' => vertical dimension
+        queryDataNPADateTimeSorted = queryDataNPA[self.sortedIndexUtcTime] ## create sorted 2-dimensional array
+        self.queryDataNPADateTimeSorted = queryDataNPADateTimeSorted
         #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
         self.minDateTime = queryDataNPADateTimeSorted[0,1]
         
@@ -495,15 +496,41 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         return (xcoords[0],ycoords[0])
             
     def WrangleMeteoParameter(self, parameterName):
+        self.WrangleMeteoParameterDummy(parameterName)
+        
+    def WrangleMeteoParameterDummy(self, parameterName):
         dims = self.queryDataNPAdtsLL.shape
+        
         #print "self.queryDataNPAdtsLL.shape=",self.queryDataNPAdtsLL.shape
         #self.meteoDataStore[parameterName] = np.array(np.ones(dims[0]))
-        if "temp" in parameterName:
-            self.meteoDataStore[parameterName] = np.random.uniform(low=273.15, high=280, size=(dims[0],))
+        
+        testinOnly = False
+        if testinOnly:
+            # This MUST in the produced merged result-data give columns of growing numbers 0,1,2,3,4, ....
+            self.meteoDataStore[parameterName] = self.queryDataNPADateTimeSorted[:,0]
+            # Obviously the row-of-code below will not give the right order as during wrangling-process
+            # because at this stage is everything sorted according utc-time
+            #self.meteoDataStore[parameterName] = np.arange(dims[0]) 
+            '''
+            If working correcly you should see at the end 0,0 .. 1,1, .. 199,199, .. 200,200, ...
+            reassembledResultArray[201, 19] =
+            Ongeval gekoppeld op gemeente niveau,1.00-01.59,03JAN06,10,Letsel,0,0,Vast voorwerp,Kruispunt,111998,516711,1,0,0,0,4.75230997787,52.6372473247,0,0
+            Ongeval exact gekoppeld aan BN,7.00-07.59,07JAN06,50,Letsel,0,1,Frontaal,Kruispunt,95069,451430,1,0,0,0,4.51384787854,52.0489154656,1,1
+            Ongeval exact gekoppeld aan BN,11.00-11.59,21JAN06,10,Letsel,0,0,Flank,Wegvak,119330.273,486468.495,1,0,0,0,4.86386813359,52.365955465,2,2
+            ...
+            Ongeval exact gekoppeld aan BN,21.00-21.59,24JAN06,15,Letsel,0,0,Frontaal,Kruispunt,191085,465993,2,0,0,0,5.91531887881,52.1818847736,197,197
+            Ongeval exact gekoppeld aan BN,8.00-08.59,25JAN06,59,Letsel,0,0,Vast voorwerp,Wegvak,226182.003,495246.493,1,0,0,0,6.43466885838,52.4413903097,198,198
+            Ongeval exact gekoppeld aan BN,16.00-16.59,25JAN06,31,Letsel,0,0,Frontaal,Wegvak,44511.752,361228.214,2,0,0,0,3.80550803333,51.2305216668,199,199
+            Ongeval exact gekoppeld aan BN,7.00-07.59,13JAN06,32,Letsel,0,0,Flank,Wegvak,58741.713,370184.112,1,0,0,0,4.00678725282,51.3136078449,200,200
+            ...
+            '''
         else:
-            self.meteoDataStore[parameterName] = np.random.uniform(low=0.0, high=100.0, size=(dims[0],))
+            if "temp" in parameterName:
+                self.meteoDataStore[parameterName] = np.random.uniform(low=273.15, high=280, size=(dims[0],))
+            else:
+                self.meteoDataStore[parameterName] = np.random.uniform(low=0.0, high=100.0, size=(dims[0],))
         if self.verbose:
-            self.CLASSPRINT("WrangleMeteoParameter(%s): meteoDataStore[%s]="%(parameterName,parameterName),self.meteoDataStore[parameterName].shape)
+            self.CLASSPRINT("WrangleMeteoParameterDummy(%s): meteoDataStore[%s]="%(parameterName,parameterName),self.meteoDataStore[parameterName].shape)
 
 
     '''
@@ -563,7 +590,13 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #print "indicesqueryDataNPAdtsLL=", indicesqueryDataNPAdtsLL.astype(np.int)
         
         # SORT ACCORDING THE INDEX-reference (== the original row-order from CSV):
-        indexSort = np.lexsort((self.queryDataNPAdtsLL[:,0],))
+        # This is a VITAL part !!! Don't touch this unless you are sure what you are doing with numpy
+        # Note: We cannot use np.lexsort ! As it will give the folowing order: '0','1','10','11','12',..,'19','2','20'
+        #indexSort = np.lexsort((self.queryDataNPAdtsLL[:,0],))  # DON'T use this here!
+        
+        indexSort = np.argsort(self.queryDataNPAdtsLL[:,0].astype(np.int))
+        #print indexSort
+        #self.PrintArray(indexSort.reshape(len(indexSort),1), arrayName="indexSort")
         queryDataNPAdtsLLIdxSorted = self.queryDataNPAdtsLL[indexSort]
         indicesqueryDataNPAdtsLLIdxSorted =  (queryDataNPAdtsLLIdxSorted[:,0]).astype(np.int)
         #print "indicesqueryDataNPAdtsLLIdxSorted=", indicesqueryDataNPAdtsLLIdxSorted
@@ -571,7 +604,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         if self.verbose and self.verboseLevel>=10:
             self.PrintArray(queryDataNPAdtsLLIdxSorted, arrayName="queryDataNPAdtsLLIdxSorted")
             self.PrintArray(dataOut, arrayName="dataOut")
-            #print "dataOut.shape=", dataOut.shape        
+            #print "dataOut.shape=", dataOut.shape
         
         meteoDataStoreNpArray = np.array([])
         
@@ -609,16 +642,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         if self.verbose and self.verboseLevel>=10:
             self.PrintArrayJoinedAsString(reassembledResultArray, arrayName="reassembledResultArray")
-        
-        #reassembledResultArray = np.hstack( (dataOut,meteoDataStoreList) )
-                
-        #self.queryDataNPAdtsLL = np.vstack(( queryDataNPADateTimeSorted[:,0], queryDataNPADateTimeSorted[:,1], 
-        #                                queryDataNPADateTimeSorted[:,2], queryDataNPADateTimeSorted[:,3], 
-        #                                longitudes,latitudes)).T
-        #print "reassembledResultArray=\n", reassembledResultArray
-        
-        #for rowId in indicesqueryDataNPAdtsLLIdxSorted:
-        
+                        
         if onlyTesting:
             printProgress("** Slower control procedure: should give same as above .. ***")
             # write the header
