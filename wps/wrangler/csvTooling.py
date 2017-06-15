@@ -45,9 +45,6 @@ def printProgress(infoStr):
         logFile.write(infoStr+"\n")
 
 
-geoTransfWGS84 = Geod(ellps='WGS84')
-geoTransf = geoTransfWGS84
-
 class csvDataObject():
 
     def VerboseOn(self):
@@ -83,7 +80,6 @@ class csvDataObject():
         '''
         self.verbose = True
         self.verboseLevel = 0
-        self.rescaleFactor = 1.0
         self.inputCSVfile = ""
         self.metaCSVfile = ""
         self.jobDescfile = ""
@@ -687,24 +683,6 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             np.savetxt(self.outputCSVfile, reassembledResultArray, fmt='%s', delimiter=self.delimiter, comments='', header=headerTextOutput)
             # time: 11.780u 6.344s 0:18.13 99.9%	0+0k 0+50240io 0pf+0w
 
-
-    def Distance2pointsInLonLat(self, lng1,lat1,lng2,lat2):
-        #global geoTransfWGS84
-        #geoTransfWGS84
-        az12,az21,dist = geoTransf.inv(lng1,lat1,lng2,lat2)
-        return dist
-        #help(Geod.__new__) gives a list of possible ellipsoids.
-        #Calculate the distance between two points, as well as the local heading
-        # lat1,lng1 = (40.7143528, -74.0059731)  # New York, NY
-        # lat2,lng2 = (49.261226, -123.1139268)   # Vancouver, Canada
-        # az12,az21,dist = geoTransf.inv(lng1,lat1,lng2,lat2)
-
-    def Distance2pointsInXY(self, ptA,ptB):
-        #ptA=[(0,0)]
-        #ptB=[(10,20)]
-        vecAB = np.array(ptB) - np.array(ptA)
-        vecLng = np.linalg.norm(vecAB)
-        return vecLng
 
 
     
