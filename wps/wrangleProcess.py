@@ -1,9 +1,6 @@
 from pywps.Process import WPSProcess
-import types
-import os
-import time
 import wrangler.wrangleCSV_NCDF as wrangler
-import sys, logging
+import sys, logging, types, os, time, tempfile
 
 class WrangleProcess(WPSProcess):
     def __init__(self):
@@ -47,19 +44,22 @@ class WrangleProcess(WPSProcess):
         jobDescPath = self.jobDescPath.getValue()
         limit = self.limit.getValue()
 
+        currentBasket = inputCSVPath_t[0]+"_"+time.strftime("%Y%m%dt%H%M%S"+"_")
         pathToBasket = os.environ['POF_OUTPUT_PATH']
         urlToBasket  = os.environ['POF_OUTPUT_URL']
 
-        dwp_dict = {"inputCSV":pathToBasket+"/../"+inputCSVPath,
-                    "metaCSV":pathToBasket+"/../"+metaCSVPath,
-                    "jobDesc":pathToBasket+"/../"+jobDescPath,
-                    "logFile":pathToBasket+inputCSVPath_t[0]+".log",
+        basket = tempfile.mkdtemp(prefix=currentBasket, dir=pathToBasket)
+
+        dwp_dict = {"inputCSV":basket+"/../../"+inputCSVPath,
+                    "metaCSV":basket+"/../../"+metaCSVPath,
+                    "jobDesc":basket+"/../../"+jobDescPath,
+                    "logFile":basket+"/"+inputCSVPath_t[0]+".log",
                     "limitTo":limit}
         try:
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
             dwp.ReadInputCSV()
-            dwp.WrangleWithNetCdfData({"outputCSV":pathToBasket+outputFileName})
+            dwp.WrangleWithNetCdfData({"outputCSV":basket+"/"+outputFileName})
         except Exception, e:
             self.status.set(e, 500)
             raise Exception(e)

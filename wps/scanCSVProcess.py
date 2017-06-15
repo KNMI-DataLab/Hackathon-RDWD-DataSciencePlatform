@@ -1,7 +1,7 @@
 import wrangler.wrangleCSV_NCDF as wrangler
 from pywps.Process import WPSProcess
 
-import sys, logging, json, types, os, time
+import sys, logging, json, types, os, time, tempfile
 
 class ScanCSVProcess(WPSProcess):
     def __init__(self):
@@ -42,13 +42,16 @@ class ScanCSVProcess(WPSProcess):
         descCSVPath = self.descCSVPath.getValue()
         jobDescPath = self.jobDescPath.getValue()
 
+        currentBasket = inputCSVPath_t[0]+"_"+time.strftime("%Y%m%dt%H%M%S"+"_")
         pathToBasket = os.environ['POF_OUTPUT_PATH']
         urlToBasket  = os.environ['POF_OUTPUT_URL']
 
-        dwp_dict = {"inputCSV":pathToBasket+"/../"+inputCSVPath,
-                    "metaCSV":pathToBasket+"/../"+descCSVPath,
-                    "jobDesc":pathToBasket+"/../"+jobDescPath,
-                    "logFile":pathToBasket+inputCSVPath_t[0]+".log"}
+        basket = tempfile.mkdtemp(prefix=currentBasket, dir=pathToBasket)
+
+        dwp_dict = {"inputCSV":basket+"/../../"+inputCSVPath,
+                    "metaCSV":basket+"/../../"+descCSVPath,
+                    "jobDesc":basket+"/../../"+jobDescPath,
+                    "logFile":basket+"/"+inputCSVPath_t[0]+".log"}
         try:
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
@@ -60,7 +63,7 @@ class ScanCSVProcess(WPSProcess):
             csvMetaData["projString"] = dwp.GetProjectionString()
             csvMetaData.update(dwp.GetLatLonBBOXOfData())
 
-            metaCSVFile = open(pathToBasket+"/"+outputFileName, "w")
+            metaCSVFile = open(basket+"/"+outputFileName, "w")
             json.dump(csvMetaData, metaCSVFile)
             metaCSVFile.close()
             
