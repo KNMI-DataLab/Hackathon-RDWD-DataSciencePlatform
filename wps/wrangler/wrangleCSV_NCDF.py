@@ -34,7 +34,6 @@ python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./d
 '''
 #from __future__ import print_function
 import sys, os, os.path, string, datetime, re
-import vtk
 import csvTooling as csvT
 import logging
 from csvTooling import printProgress 
