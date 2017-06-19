@@ -68,8 +68,9 @@ class ncdfDataObject():
         self.CLASSPRINT("*******************************************")
 
         self.timeDim = self.metaData.variables['time'].shape[0]
-
+        # NOTE: The following reads all the time-indices of the entire file. This may take some times (3-4 seconds).
         self.timeArray = self.metaData.variables['time'][:]
+        
         self.timeUnits = self.metaData.variables['time'].units
         self.dateTimeArray = ncdf.num2date(self.timeArray,self.timeUnits,calendar='standard')
 
@@ -90,10 +91,13 @@ class ncdfDataObject():
         
         self.xDim = self.metaData.variables['x'].shape[0]
         self.yDim = self.metaData.variables['y'].shape[0]
-
+        # 1D dimensional arrays; x/y-axes only
         self.xAxis = self.metaData.variables['x'][:]
         self.yAxis = self.metaData.variables['y'][:]
         
+        # TODO:  Check if the data is grid-data or point-data!
+        # The code below is grid-data specific.
+        # We have to make a 2D grid from the x/y-axes.
         # meschgrid works like this:
         # gridded_lons, gridded_lats = np.meshgrid(lons_axis, lats_axis)
         self.xcoords, self.ycoords  = np.meshgrid(self.xAxis, self.yAxis)
@@ -105,7 +109,7 @@ class ncdfDataObject():
         self.projFuncDefstring = self.metaData.variables['projection'].proj4_params
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
 
-
+        # Both longitudes and latitudes are 2D arrays of the (RADAR) grid
         (self.longitudes,self.latitudes) = self.UnProject2LongitudeLatitudes(self.xcoords, self.ycoords)
 
         #print self.longitudes.shape, self.longitudes
@@ -296,8 +300,8 @@ if __name__ == "__main__":  # ONLY for testing
     csvT.InitializeWranglerLogger(csvT.logFileName)
     
     ndo = ncdfDataObject()
-    #ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc")
-    ndo.SetDataURL("/visdataATX/hackathon/radarFullWholeData.nc")
+    ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc")
+    #ndo.SetDataURL("/visdataATX/hackathon/radarFullWholeData.nc")
     ndo.OpenMetaData()
     
     
@@ -329,10 +333,12 @@ if __name__ == "__main__":  # ONLY for testing
 
 '''
 OPENDAP URL to testdata:
-http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
+http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc
+# Note: the URL below is NOT correct for OpenDAP acces;
+#http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
+
 
 field of interest: "precipitation_amount"
-
 
 
 
