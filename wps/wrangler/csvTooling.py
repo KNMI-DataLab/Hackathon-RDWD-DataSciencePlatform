@@ -14,6 +14,7 @@ import pytz
 import pprint
 import jsonTooling as jst
 import os, sys
+from dataObjectBase import dataObjectBase
 
 #from numpy import *
 #from numpy import ma
@@ -45,33 +46,7 @@ def printProgress(infoStr):
         logFile.write(infoStr+"\n")
 
 
-class csvDataObject():
-
-    def VerboseOn(self):
-        self.verbose=True
-    def VerboseOff(self):
-        self.verbose=False
-
-    def SetVerboseLevel(self, verboseLevel):
-        self.verboseLevel = verboseLevel
-
-    def GetClassName(self):
-        return self.__class__.__name__
-
-    def CLASSPRINT(self,*args):
-        '''
-        Printing debug information ...
-        '''
-        if self.verbose:
-            try:
-                pid = "%5d" %(os.getpid())
-            except:
-                pid = "%5d" %(0)
-            try:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
-            except:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
-
+class csvDataObject(dataObjectBase):
     def __init__(self):
         '''
         Constructor:
