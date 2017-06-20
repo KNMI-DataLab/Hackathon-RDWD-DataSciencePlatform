@@ -1,13 +1,9 @@
 import numpy as np
 from scipy import interpolate
 import pandas as pd
+import pymysql
+import json
 import matplotlib.pyplot as plt
-
-import sys
-sys.path.insert(0, "/usr/people/pagani/development/innovationWeeks/Hackathon-RDWD-DataSciencePlatform/dbConnect")
-from dbConnector import *
-
-
 
 
 
@@ -29,24 +25,69 @@ def interpolateAWS(data, newPoint):
 
 
 
+
+
+
+def initDBConn():
+    with open("../dbConnect/configDB.json") as data_file:
+        configData = json.load(data_file)
+
+    user = configData['user']
+    pwd = configData['pw']
+    host = configData['host']
+    port = configData['port']
+    db = configData['db']
+
+    db = pymysql.connect(host=host,  # your host, usually localhost
+                         user=user,  # your username
+                         passwd=pwd,  # your password
+                         db=db)  # name of the data base
+
+    # you must create a Cursor object. It will let
+    #  you execute all the queries you need
+    return(db)
+
+
+
+
+
+def exampleQueryStations():
+
+    db = initDBConn()
+
+    cur = db.cursor()
+
+    queryString = "SELECT * FROM stations WHERE type_id=2"
+
+    df = pd.read_sql(queryString, db)
+
+
+    # Use all the SQL you like
+    #cur.execute(queryString)
+
+    # print all the first cell of all the rows
+    #for row in cur.fetchall():
+      #  print row
+
+
+    #psql.frame_query()
+
+    #df = DataFrame(cur.fetchall())
+    #df.columns = cur.keys()
+
+    db.close()
+
+    return(df)
+
+
+
+
+
+#Example
+
+
 import plotly
 
-
-
-
-
-
-
-#from mpl_toolkits.basemap import Basemap
-
-#map = Basemap(projection='merc', lat_0=50, lon_0=5,
-           #   resolution = 'h', area_thresh = 0.1, llcrnrlon = 3,
-            #  llcrnrlat = 48, urcrnrlon = 8, urcrnrlat = 57)
-
-#map.drawcoastlines()
-#map.drawcountries()
-#map.fillcontinents()
-#map.drawmapboundary()
 
 
 #Example:
@@ -59,17 +100,12 @@ newPoint = [51.4422, 3.59611]
 
 newz=interpolateAWS(df, newPoint)
 
-#lons = df["longitude"].tolist()
-#lats = df["latitude"].tolist()
-#vals = df["value"].tolist()
-#x,y = map(lons, lats)
-#map.scatter(x,y, c=vals)
-#plt.scatter(df["longitude"],df["latitude"],c=df["value"])
-#plt.scatter(newPoint[1], newPoint[0], c= newz)
-#plt.colorbar()
-#plt.show()
+df = df.append({"code" : -99999, "name": "NEWPOINT", "type_id": -99999, "latitude": newPoint[0], "longitude": newPoint[1], "value": newz
+                         }, ignore_index = True)
 
-#df.append()
+print(df)
+
+
 
 scl = [ [0,"rgb(5, 10, 172)"],[0.35,"rgb(40, 60, 190)"],[0.5,"rgb(70, 100, 245)"],\
     [0.6,"rgb(90, 120, 245)"],[0.7,"rgb(106, 137, 247)"],[1,"rgb(220, 220, 220)"] ]
@@ -103,3 +139,7 @@ data = [ dict(
 
 fig = dict( data=data)
 plotly.offline.plot( fig, validate=False)
+
+
+
+

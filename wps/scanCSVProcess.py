@@ -34,6 +34,14 @@ class ScanCSVProcess(WPSProcess):
         self.outputURL = self.addLiteralOutput(identifier="outputURL",
                                                title="The url to the output CSV file",
                                                type="String")
+        self.percentComplete = 0
+
+    def statusCallback(self, message, percentComplete=0):
+        self.percentComplete += percentComplete
+        if self.percentComplete >= 100: self.percentComplete = 100
+        self.status.set(message, self.percentComplete)
+        time.sleep(0.5)
+        
     def execute(self):
 
         inputCSVPath = self.inputCSVPath.getValue()
@@ -44,13 +52,14 @@ class ScanCSVProcess(WPSProcess):
 
         currentBasket = inputCSVPath_t[0]+"_"+time.strftime("%Y%m%dt%H%M%S"+"_")
         pathToBasket = os.environ['POF_OUTPUT_PATH']
-        urlToBasket  = os.environ['POF_OUTPUT_URL']
 
         basket = tempfile.mkdtemp(prefix=currentBasket, dir=pathToBasket)
+        urlToBasket  = os.environ['POF_OUTPUT_URL']+"/"+basket[len(pathToBasket):]
 
         dwp_dict = {"inputCSV":basket+"/../../"+inputCSVPath,
                     "metaCSV":basket+"/../../"+descCSVPath,
                     "jobDesc":basket+"/../../"+jobDescPath,
+                    "statusCallback":self.statusCallback,
                     "logFile":basket+"/"+inputCSVPath_t[0]+".log"}
         try:
             dwp = wrangler.dataWranglerProcessor()
@@ -72,5 +81,5 @@ class ScanCSVProcess(WPSProcess):
             raise Exception(e)
             return 1
 
-        self.outputURL.setValue(urlToBasket+outputFileName)
+        self.outputURL.setValue(urlToBasket+"/"+outputFileName)
         self.status.set("Ready", 100)
