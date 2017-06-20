@@ -141,6 +141,20 @@ class dataObjectBase():
         latitudes = LL[1]
         return (longitudes,latitudes) # tuple, vector
 
+    def ProjectLongitudeLatitudes(self, longitudes,latitudes):
+        XYcoords  = self.projectionFunction(longitudes,latitudes,inverse=False)
+        xcoords = XYcoords[0]
+        ycoords = XYcoords[1]  
+        return (xcoords, ycoords) # tuple, vector
+
+    def ProjectLonLatSinglePoint(self, lon, lat):
+        # Usage:
+        # (x,y) = ProjectLonLatSinglePoint(52.379293, 4.899645)
+        XYcoords  = self.projectionFunction([lon,],[lat,],inverse=False)
+        xcoords = XYcoords[0]
+        ycoords = XYcoords[1]  
+        return (xcoords[0],ycoords[0])
+
     def Distance2pointsInLonLat(self, lng1,lat1,lng2,lat2):
         #global geoTransfWGS84
         #geoTransfWGS84

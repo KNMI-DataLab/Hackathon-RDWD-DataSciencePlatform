@@ -231,10 +231,36 @@ class dataWranglerProcessor():
         printProgress("*******************************************")
         printProgress("***** Wrangling Processing STARTED.  ******")
         printProgress("*******************************************")
-        
+
+        tmpFileName = "./tempFile.csv"
+        self.csvDataObj.WriteFullQueryDataToTmpFile(tmpFileName)
+        '''
+        # Do everything at once:
+        self.csvDataObj.ReadFullQueryDataFromTmpFile(tmpFileName, startAtRow = 0, readRows=-1)
         self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
         self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
         self.csvDataObj.ProduceOutput(exportLonLat = True)
+        '''
+        
+        self.totalNumberOfCSVrows = self.csvDataObj.GetTotalNumberOfCSVrows()
+        self.nproc = 1
+        self.processingBulkSize = self.totalNumberOfCSVrows / 100   # number of rows representing 01% of total
+        # split temporary request data into #nr bulks
+        bulkNr = 0
+        rowsProcessed = 0
+        tempFileList = []
+        while rowsProcessed<self.totalNumberOfCSVrows:
+            self.csvDataObj.ReadFullQueryDataFromTmpFile(tmpFileName, startAtRow = rowsProcessed, readRows=self.processingBulkSize)
+            self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
+            self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
+            tmpBulkFileName = "./tempBulkOutputFile%03d.csv"%(bulkNr)
+            tempFileList.append(tmpBulkFileName)
+            self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
+            rowsProcessed +=self.processingBulkSize
+            bulkNr += 1
+        
+        self.csvDataObj.WriteCSVHeader(fieldList = ["utc-time","longitude","latitude", "temperature", "precipitation"] )
+        self.csvDataObj.JoinBulkResults(tempFileList)
         
         printProgress("*******************************************")
         printProgress("***** Wrangling Processing FINISHED. ******")
