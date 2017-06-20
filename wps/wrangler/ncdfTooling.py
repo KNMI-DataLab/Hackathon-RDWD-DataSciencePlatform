@@ -9,38 +9,9 @@ from pyproj import Geod
 import inspect
 import csvTooling as csvT
 from csvTooling import printProgress 
+from dataObjectBase import dataObjectBase
 
-
-geoTransfWGS84 = Geod(ellps='WGS84')
-geoTransf = geoTransfWGS84
-
-class ncdfDataObject():
-
-    def VerboseOn(self):
-        self.verbose=True
-    def VerboseOff(self):
-        self.verbose=False
-
-    def SetVerboseLevel(self, verboseLevel):
-        self.verboseLevel = verboseLevel
-
-    def GetClassName(self):
-        return self.__class__.__name__
-
-    def CLASSPRINT(self,*args):
-        '''
-        Printing debug information ...
-        '''
-        if self.verbose:
-            try:
-                pid = "%5d" %(os.getpid())
-            except:
-                pid = "%5d" %(0)
-            try:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(args)) )
-            except:
-                printProgress( "[%s:%s] %s.%s() %s" %(pid,loggerName,self.__class__.__name__,inspect.stack()[1][3], ''.join(map(str,args))  ) )
-
+class ncdfDataObject(dataObjectBase):
     def __init__(self):
         '''
         Constructor:
@@ -68,8 +39,9 @@ class ncdfDataObject():
         self.CLASSPRINT("*******************************************")
 
         self.timeDim = self.metaData.variables['time'].shape[0]
-
+        # NOTE: The following reads all the time-indices of the entire file. This may take some times (3-4 seconds).
         self.timeArray = self.metaData.variables['time'][:]
+        
         self.timeUnits = self.metaData.variables['time'].units
         self.dateTimeArray = ncdf.num2date(self.timeArray,self.timeUnits,calendar='standard')
 
@@ -90,10 +62,13 @@ class ncdfDataObject():
         
         self.xDim = self.metaData.variables['x'].shape[0]
         self.yDim = self.metaData.variables['y'].shape[0]
-
+        # 1D dimensional arrays; x/y-axes only
         self.xAxis = self.metaData.variables['x'][:]
         self.yAxis = self.metaData.variables['y'][:]
         
+        # TODO:  Check if the data is grid-data or point-data!
+        # The code below is grid-data specific.
+        # We have to make a 2D grid from the x/y-axes.
         # meschgrid works like this:
         # gridded_lons, gridded_lats = np.meshgrid(lons_axis, lats_axis)
         self.xcoords, self.ycoords  = np.meshgrid(self.xAxis, self.yAxis)
@@ -105,7 +80,7 @@ class ncdfDataObject():
         self.projFuncDefstring = self.metaData.variables['projection'].proj4_params
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
 
-
+        # Both longitudes and latitudes are 2D arrays of the (RADAR) grid
         (self.longitudes,self.latitudes) = self.UnProject2LongitudeLatitudes(self.xcoords, self.ycoords)
 
         #print self.longitudes.shape, self.longitudes
@@ -135,33 +110,6 @@ class ncdfDataObject():
         self.CLASSPRINT("LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south) )
         self.CLASSPRINT("##########################################################")
         
-    def FindClosestDateTime(self, givenDateTime, dateTimeList):
-        b_d = givenDateTime #  == datetime object
-        def func(x):
-           d =  x           #  #  == datetime object
-           delta =  d - b_d if d > b_d else timedelta.max
-           return delta
-        return min(dateTimeList, key = func)
-
-    def FindClosestDateTimeIndex(self, givenDateTime):
-        closestDateTime = self.FindClosestDateTime(givenDateTime, self.dateTimeArray)
-        closestDateTimeIndex = np.where(self.dateTimeArray == closestDateTime)[0][0]  # np.where(self.dateTimeArray == closestDateTime) == gives= => [(array([2511]),)]
-        printProgress("givenDateTime=%s, closestDateTime=%s, closestDateTimeIndex=%d" %(str(givenDateTime),str(closestDateTime),closestDateTimeIndex ))
-        return closestDateTimeIndex
-
-    def GetTimeRangeOfData(self):
-        ''' 
-        Returns json: { "minDateTime": "2005-12-31 23:55:00 UTC",
-                        "maxDateTime": "2015-12-31 23:50:00 UTC",
-                        "deltaTime": 300 
-                        }
-        Note: The actual range is compute in the function: OpenMetaData()
-        '''
-        dataRange =  {  "minDateTime": self.minDateTime,
-                        "maxDateTime": self.maxDateTime,
-                        "deltaTime":   self.deltaTime }
-        return dataRange
-
     def GetGridDimensions(self):
         ''' 
         Returns json: [ 256, 256 ]
@@ -169,51 +117,8 @@ class ncdfDataObject():
         '''
         return [self.xDim, self.yDim]
     
-    def GetLatLonBBOXOfData(self):
-        ''' 
-        Returns json: { "west": 0.01920864511118657,
-                        "east": 8.3233501877260778,
-                        "north": 55.285268133270826,
-                        "south": 49.385066927714206
-                     }
-        Note: The actual range is compute in the function: OpenMetaData()
-        '''
-        LATLONBBOX =  { "west": self.llbox_west,
-                        "east": self.llbox_east,
-                        "north": self.llbox_north,
-                        "south": self.llbox_south
-                     }
-        return LATLONBBOX
-
-    def GetProjectionString(self):
-        return self.projFuncDefstring
-        
-
-    def UnProject2LongitudeLatitudes(self, xcoords, ycoords):
-        LL  = self.projectionFunction(xcoords, ycoords,inverse=True)
-        longitudes = LL[0]
-        latitudes = LL[1]
-        return (longitudes,latitudes) # tuple, vector
-
-    def Distance2pointsInLonLat(self, lng1,lat1,lng2,lat2):
-        #global geoTransfWGS84
-        #geoTransfWGS84
-        az12,az21,dist = geoTransf.inv(lng1,lat1,lng2,lat2)
-        return dist
-        #help(Geod.__new__) gives a list of possible ellipsoids.
-        #Calculate the distance between two points, as well as the local heading
-        # lat1,lng1 = (40.7143528, -74.0059731)  # New York, NY
-        # lat2,lng2 = (49.261226, -123.1139268)   # Vancouver, Canada
-        # az12,az21,dist = geoTransf.inv(lng1,lat1,lng2,lat2)
-
-    def Distance2pointsInXY(self, ptA,ptB):
-        #ptA=[(0,0)]
-        #ptB=[(10,20)]
-        vecAB = np.array(ptB) - np.array(ptA)
-        vecLng = np.linalg.norm(vecAB)
-        return vecLng
-
-    def FindClosestLonLatGridPointIndex(self, lon, lat):
+       
+    def FindClosestLonLatPointIndex(self, lon, lat):
         #  This works with 2D array self.lonLatStacked: [ [lon,lat], ... ]
         printProgress("Computing distance %s: to lat-lon-grid [%dx%d]; gridSize=%d" %(str((lon, lat)),self.xDim,self.yDim,self.gridSize))
         idx = 0
@@ -277,7 +182,7 @@ class ncdfDataObject():
         if variableFound:
             dataValue = variableFound[timeIndex][idY][idX]
             printProgress("givenDateTime=%s, closestDateTimeIndex=%d, query(lon, lat)=%s, minDistanceDataIndex=%d, dataValue=%f %s"
-            %(str(givenDateTime), closestDateTimeIndex, str((lon, lat)), minDistanceDataIndex, float(dataValue), variableFound.units) )
+            %(str(givenDateTime), timeIndex, str((lon, lat)), dataIndex, float(dataValue), variableFound.units) )
             return dataValue
         else:
             return None
@@ -296,8 +201,9 @@ if __name__ == "__main__":  # ONLY for testing
     csvT.InitializeWranglerLogger(csvT.logFileName)
     
     ndo = ncdfDataObject()
-    #ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc")
-    ndo.SetDataURL("/visdataATX/hackathon/radarFullWholeData.nc")
+    #ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc")
+    ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc")
+    #ndo.SetDataURL("/visdataATX/hackathon/radarFullWholeData.nc")
     ndo.OpenMetaData()
     
     
@@ -309,7 +215,7 @@ if __name__ == "__main__":  # ONLY for testing
     
     # 2) Find the closest grid-point of the data
     (lon, lat) = (5.2, 52.0)
-    minDistanceDataIndex = ndo.FindClosestLonLatGridPointIndex(lon, lat)
+    minDistanceDataIndex = ndo.FindClosestLonLatPointIndex(lon, lat)
     
     # 3) Get the data the closest-time and the closest grid-point
     dataValue = ndo.GetDataAtIndex(closestDateTimeIndex, minDistanceDataIndex, variableName="precipitation_amount")
@@ -329,10 +235,13 @@ if __name__ == "__main__":  # ONLY for testing
 
 '''
 OPENDAP URL to testdata:
-http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
+
+http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc
+
+# Note: the URL below is NOT correct for OpenDAP acces;
+#http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
 
 field of interest: "precipitation_amount"
-
 
 
 
