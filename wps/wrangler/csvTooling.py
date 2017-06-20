@@ -722,7 +722,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         ftxt.close()
 
         if self.verbose:
-            self.CLASSPRINT( "headerText=\n%s"  %(self.headerTextOutput))
+            self.CLASSPRINT( "headerText=\n%s"  %(headerTextOutput))
 
 
     def JoinBulkResults(self, tempFileList, removeTempFiles=True):
