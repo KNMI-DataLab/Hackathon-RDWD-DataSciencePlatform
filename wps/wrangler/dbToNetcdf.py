@@ -49,6 +49,13 @@ dictStations = dict(enumerate(stats.flatten(),0))
 reversedStations = dict(zip(dictStations.values(),dictStations.keys()))
 
 
+timeInterval = pd.date_range("2006-01-01 00:00", "2016-01-01 00:00", freq="10min")
+
+test = timeInterval.map(lambda x: netCDF4.date2num(x,"seconds since 1950-01-01 00:00:00"))
+
+times[:] = test[:]
+
+
 for stationNumber in stats:
 
     arrayVal = reversedStations[str(stationNumber)]
@@ -67,9 +74,6 @@ for stationNumber in stats:
     tempDF["dateTime"] = pd.to_datetime(tempDF["dateTime"])
 
 
-    timeInterval = pd.date_range("2006-01-01 00:00", "2016-01-01 00:00", freq="10min")
-
-    #test = timeInterval.map(lambda x: netCDF4.date2num(x,"seconds since 1950-01-01 00:00:00"))
 
 
     timeDF = pd.DataFrame(pd.to_datetime(timeInterval))
