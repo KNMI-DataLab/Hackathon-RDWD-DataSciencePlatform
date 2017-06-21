@@ -250,8 +250,10 @@ class dataWranglerProcessor():
             valueList.append(value)
             recordsProcessed += 1
             if recordsProcessed % 10 == 0:
-                self.callStatusCallback("Calculating. %d of %d records processed." % (recordsProcessed, self.csvDataObj.GetTotalNumberOfCSVrows()),
-                                        10.0 / float(self.csvDataObj.GetTotalNumberOfCSVrows()) * 100 )
+                if self.limitTo > 0: total = self.limitTo
+                else: total = self.csvDataObj.GetTotalNumberOfCSVrows()
+                self.callStatusCallback("Calculating. %d of %d records processed." % (recordsProcessed, total),
+                                        10.0 / float(total) * 100 )
         valueArray = np.array(valueList)
         return valueArray
         
@@ -335,12 +337,12 @@ class dataWranglerProcessor():
             self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
-            if self.limitTo > 0:
-                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo),
-                                        (float(self.processingBulkSize) / float(self.limitTo)) * 100.0)
-            else:
-                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows),
-                                        self.percentFraction)
+            #if self.limitTo > 0:
+            #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo),
+            #                            (float(self.processingBulkSize) / float(self.limitTo)) * 100.0)
+            #else:
+            #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows),
+            #                            self.percentFraction)
             if self.limitTo>0 and rowsProcessed >= self.limitTo:
                 break
         
