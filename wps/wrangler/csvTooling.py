@@ -456,7 +456,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 printProgress("%s" %( pprint.pformat(self.queryDataNPAdtsLL[i][:], width=200) ) )
             
     def GetTotalNumberOfCSVrows(self):
-        return self.queryDataNPAdtsLL.shape[0]
+        return self.dataColumns.shape[0]
         
     def ReadFullQueryDataFromTmpFile(self,  tmpFileName, startAtRow = 0, readRows=-1):
         #headerTextTmpFile =  "id, utc-time, utc-time-str, X-coord, Y-coord, longitude, latitude"  # 2-dimensional numpy array sorted by utc time

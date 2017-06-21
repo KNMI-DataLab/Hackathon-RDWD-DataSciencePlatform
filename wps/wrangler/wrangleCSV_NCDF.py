@@ -237,7 +237,7 @@ class dataWranglerProcessor():
         dataValue = ndo.GetDataAtIndex(closestDateTimeIndex, minDistanceDataIndex, variableName=arrayName)
         return dataValue
         
-    def WrangleWithNetCdfDataArray(self, dataSource, arrayName):
+    def WrangleWithNetCdfDataArray(self, dataSource, arrayName, recordsProcessed):
         # self.csvDataObj.queryDataNPAdtsLL: 2-dimensional numpy array [  [id, utc-time, longitude, latitude ], .. ] 
         valueList = []
         for timeLonLat in self.csvDataObj.queryDataNPAdtsLL:
@@ -248,6 +248,10 @@ class dataWranglerProcessor():
             lat     = timeLonLat[3]
             value = self.GetValueFromNetCdfDataSource_time_lon_lat(dataSource, arrayName, utcTime, lon, lat)
             valueList.append(value)
+            recordsProcessed += 1
+            if recordsProcessed % 10 == 0:
+                self.callStatusCallback("Calculating. %d of %d records processed." % (recordsProcessed, self.csvDataObj.GetTotalNumberOfCSVrows()),
+                                        10.0 / float(self.csvDataObj.GetTotalNumberOfCSVrows()) * 100 )
         valueArray = np.array(valueList)
         return valueArray
         
@@ -302,9 +306,9 @@ class dataWranglerProcessor():
         
         self.totalNumberOfCSVrows = self.csvDataObj.GetTotalNumberOfCSVrows()
         self.nproc = 1
-        self.percentFraction = 0.01  # 0.01% of 150.000 rows => 10000 files of 15 rows in each file
+        #self.percentFraction = 0.01  # 0.01% of 150.000 rows => 10000 files of 15 rows in each file
         #self.percentFraction = 0.1  # 0.1% of 150.000 rows => 1000 files of 150 rows in each file
-        #self.percentFraction = 1  # 1% of 150.000 rows => 100 files of 1500 rows in each file
+        self.percentFraction = 1  # 1% of 150.000 rows => 100 files of 1500 rows in each file
         self.percentParts = int( 100/self.percentFraction )
         self.processingBulkSize = self.totalNumberOfCSVrows / self.percentParts    # number of rows representing 1% (0.1%,0.01%) of total
 
@@ -321,7 +325,7 @@ class dataWranglerProcessor():
 
             for dataSource in self.jobDescDict["datatowrangle"]:
                 for parameterName in dataSource["fields"]:
-                    self.csvDataObj.meteoDataStore[parameterName] = self.WrangleWithNetCdfDataArray(dataSource, parameterName)
+                    self.csvDataObj.meteoDataStore[parameterName] = self.WrangleWithNetCdfDataArray(dataSource, parameterName, rowsProcessed)
                     parameterList.append(parameterName)
 
             #self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
@@ -332,9 +336,11 @@ class dataWranglerProcessor():
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
             if self.limitTo > 0:
-                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo), (float(rowsProcessed) / float(self.limitTo)) * 100.0)
+                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo),
+                                        (float(self.processingBulkSize) / float(self.limitTo)) * 100.0)
             else:
-                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows), bulkNr*self.percentFraction)
+                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows),
+                                        self.percentFraction)
             if self.limitTo>0 and rowsProcessed >= self.limitTo:
                 break
         
