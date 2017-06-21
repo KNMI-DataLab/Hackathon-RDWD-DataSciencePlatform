@@ -4,7 +4,7 @@
      "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc",
 #    r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc"
 #     "/visdataATX/hackathon/radarFullWholeData.nc"     
-     "fields": ["temperature", "precipitation_amount"]
+     "fields": ["precipitation_amount"]
    }
 #   ,
 #   {

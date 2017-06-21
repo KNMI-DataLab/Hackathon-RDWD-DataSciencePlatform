@@ -239,7 +239,7 @@ OPENDAP URL to testdata:
 http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc
 
 # Note: the URL below is NOT correct for OpenDAP acces;
-#http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
+# http://opendap.knmi.nl/knmi/thredds/fileServer/DATALAB/hackathon/radarFullWholeData.nc
 
 field of interest: "precipitation_amount"
 

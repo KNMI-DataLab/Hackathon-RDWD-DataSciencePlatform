@@ -6,6 +6,7 @@ import inspect
 import math
 
 import numpy as np
+np.set_printoptions(linewidth=200)
 import pyproj
 from pyproj import Geod
 import csv
@@ -15,6 +16,9 @@ import pprint
 import jsonTooling as jst
 import os, sys
 from dataObjectBase import dataObjectBase
+
+import pandas as pd
+# apt-get install python-pandas
 
 #from numpy import *
 #from numpy import ma
@@ -60,7 +64,12 @@ class csvDataObject(dataObjectBase):
         self.jobDescfile = ""
         self.outputCSVfile = ""
         self.limitTo = -1
-        self.delimiter = ","
+        self.delimiter = ","        
+
+        # Resolving situations like:
+        #     Ongeval exact gekoppeld aan BN,Onbekend,29JAN07,Onbekend,Letsel,0,0,Flank,Kruispunt,254097,569483,1,0,1,0
+        self.invalidDateTime = np.datetime64('4000-01-01') # reserved  for "INVALID"        
+        
         self.meteoDataStore = {}
         
         # There are situation wheren the hour and/or minute is NOT specified.
@@ -213,7 +222,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                     except:
                         self.CLASSPRINT('WARNING: could not extract (hour & minute) from: "(%s,%s)"' %(hourStr,minuteStr) )
                     
-                    return None  # this mean INVALID request
+                    return None,None  # this mean INVALID request
 
             try:
                 minute = int(minuteStr)
@@ -222,7 +231,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                     minute = self.autoResolve_minute
                 else:
                     self.CLASSPRINT('WARNING: could not extract minute from: "%s"' %(minuteStr) )
-                    return None  # this mean INVALID request
+                    return None,None  # this mean INVALID request
 
             
         localTime = givenDate + timedelta(hours=hour, minutes=minute)
@@ -234,7 +243,24 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         
         fmt = '%Y-%m-%d %H:%M:%S %Z'
         utcTimeStr = utcTime.strftime(fmt)
-        return utcTimeStr
+        return (utcTimeStr, utcTime)
+    
+    def ReadCSVHeader(self):
+        self.CLASSPRINT('reading header inputCSVfile: %s' %(self.inputCSVfile) )
+        self.numHeaderLines = 1
+        # read and store header
+        self.headerText = ""
+        n = self.numHeaderLines
+        ftxt = open(self.inputCSVfile,'rU')  # read text file in UNIVERSAL mode to catch also the Windows line-endings CRLF / CR
+        while n>0:
+            ln = ftxt.readline()
+            if not ln:
+                break
+            self.headerText += ln.rstrip('\n')  
+            n -= 1
+        ftxt.close()
+        if self.verbose:
+            self.CLASSPRINT( "headerText=\n%s"  %(self.headerText))
     
     def ReadInputCSV(self):
         """
@@ -265,22 +291,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         'geoProjection': 'rijksDriehoek'
         }
         '''
-
-        self.CLASSPRINT('reading inputCSVfile: %s' %(self.inputCSVfile) )
-        self.numHeaderLines = 1
-        # read and store header
-        self.headerText = ""
-        n = self.numHeaderLines
-        ftxt = open(self.inputCSVfile,'rU')  # read text file in UNIVERSAL mode to catch also the Windows line-endings CRLF / CR
-        while n>0:
-            ln = ftxt.readline()
-            if not ln:
-                break
-            self.headerText += ln.rstrip('\n')  
-            n -= 1
-        ftxt.close()
-        if self.verbose:
-            self.CLASSPRINT( "headerText=\n%s"  %(self.headerText))
+        self.ReadCSVHeader()
         
         self.CLASSPRINT("*******************************************")
         self.CLASSPRINT("***** Reading CSV-file STARTED.   *********")
@@ -330,18 +341,20 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         9        
         '''
 
-        idCounter = 0
+        rowCounter = 0
         queryDataArray = []        
         for aa in self.dataColumns:
-            utcTimeStr = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
+            (utcTimeStr, utcTime) = self.DecodeDateTime(dateStr=aa[0], hourStr=aa[1], minuteStr=aa[2])
             if utcTimeStr==None:  # None means INVALID request!
-                dataRow = [ idCounter, "INVALID", float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
-                self.CLASSPRINT('WARNING: INVALID date-time specification at row-number: %d; "%s"' %(idCounter, str( aa ) ) )
+                #dataRow = [ rowCounter, "INVALID", float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
+                dataRow = [ rowCounter, self.invalidDateTime, "INVALID", float(aa[3]), float(aa[4]) ]  # store [id, utc-time, utc-time-str, X-coord, Y-coord ]
+                self.CLASSPRINT('WARNING: INVALID date-time specification at row-number: %d; "%s"' %(rowCounter, str( aa ) ) )
                 queryDataArray.append( dataRow )
             else:
-                dataRow = [ idCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
+                #dataRow = [ rowCounter, utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, X-coord, Y-coord ]
+                dataRow = [ rowCounter, np.datetime64(utcTime), utcTimeStr, float(aa[3]), float(aa[4]) ]  # store [id, utc-time, utc-time-str, X-coord, Y-coord ]
                 queryDataArray.append( dataRow )
-            idCounter += 1
+            rowCounter += 1
             
         ## Translate the python list to a 2 dimensional numpy array of [ [id, utc-time, X-coord, Y-coord], ... ]
         queryDataNPA = np.array(queryDataArray)
@@ -350,31 +363,32 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         #print queryDataArray
         #print "queryDataNPA=\n", queryDataNPA
 
-        # SORT ACCORDING THE UTC-TIME:
-        self.sortedIndexUtcTime = np.lexsort((queryDataNPA[:,1],)) ## create sorted list of indices. ':' => vertical dimension
-        queryDataNPADateTimeSorted = queryDataNPA[self.sortedIndexUtcTime] ## create sorted 2-dimensional array
-        self.queryDataNPADateTimeSorted = queryDataNPADateTimeSorted
-        #print "queryDataNPADateTimeSorted=\n", queryDataNPADateTimeSorted
-        self.minDateTime = queryDataNPADateTimeSorted[0,1]
+        self.timeUnits = "" #self.metaData.variables['time'].units
+        self.dateTimeArray = queryDataNPA[:,1]
+        #print self.dateTimeArray
         
-        # There might be missing/unspecified HOURS in the user-csv data.
-        # These are marked as INVALID as lexically sorted appearing at the of the array.
-        utcTimeStr_last = queryDataNPADateTimeSorted[-1,1]
-        if utcTimeStr_last!="INVALID":
-            self.maxDateTime = utcTimeStr_last
-        else:
-            ## Find the first non-invalid time from the last record upwards
-            lastPos = -2
-            try:
-                utcTimeStr_last = queryDataNPADateTimeSorted[lastPos,1]
-                while utcTimeStr_last=="INVALID":
-                    lastPos -= 1
-                    utcTimeStr_last = queryDataNPADateTimeSorted[lastPos,1]
-                self.maxDateTime = utcTimeStr_last
-            except:
-                self.CLASSPRINT('WARNING: Setting maxDateTime = minDateTime; queryDataNPADateTimeSorted[:,1].shape=', queryDataNPADateTimeSorted[:,1].shape)
-                self.maxDateTime = self.minDateTime
-                
+        # remove invalid dateTime records from the array
+        indexDelete = np.where(self.dateTimeArray == self.invalidDateTime) # reserved  for "INVALID"
+        self.dateTimeArrayClean = np.delete(self.dateTimeArray, indexDelete)
+        #print self.dateTimeArrayClean
+        
+        # np.datetime64 => datetime; The date-time must be in UTC
+        self.minDateTime = np.min(self.dateTimeArrayClean).astype(datetime).replace(tzinfo=pytz.UTC)
+        self.maxDateTime = np.max(self.dateTimeArrayClean).astype(datetime).replace(tzinfo=pytz.UTC)
+
+        fmt = '%Y-%m-%d %H:%M:%S %Z'
+        self.minDateTime_str = self.minDateTime.strftime(fmt) 
+        self.maxDateTime_str = self.maxDateTime.strftime(fmt)
+
+
+        self.CLASSPRINT("##########################################################")
+        self.CLASSPRINT("minDateTime_str=%s, maxDateTime_str=%s" %(self.minDateTime_str, self.maxDateTime_str)  )
+        self.CLASSPRINT("minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)  )
+        self.CLASSPRINT("##########################################################")
+
+        queryDataNPAdt = queryDataNPA ## create sorted 2-dimensional array
+        self.queryDataNPAdt = queryDataNPAdt
+
         self.CLASSPRINT("*******************************************")
         self.CLASSPRINT("***** Decoding date-time format FINISHED.**")
         self.CLASSPRINT("*******************************************")
@@ -386,8 +400,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.projFuncDefstring = self.metaCSVdict['projString']
         self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
         # 2-dimensional numpy array [  [id, utc-time, X-coord, Y-coord ], .. ] sorted by utc time
-        xcoords = queryDataNPADateTimeSorted[:,2] ## still a 1-dimensional numpy array of strings
-        ycoords = queryDataNPADateTimeSorted[:,3] ## still a 1-dimensional numpy array of strings
+        xcoords = queryDataNPAdt[:,3] ## still a 1-dimensional numpy array of strings
+        ycoords = queryDataNPAdt[:,4] ## still a 1-dimensional numpy array of strings
         
         (longitudes,latitudes) = self.UnProject2LongitudeLatitudes(xcoords, ycoords)
         lonLatStacked = np.vstack((longitudes,latitudes)).T
@@ -406,19 +420,84 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT("minDateTime=%s, maxDateTime=%s" %(self.minDateTime, self.maxDateTime)  )
         self.CLASSPRINT("LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south) )
         self.CLASSPRINT( "##########################################################")
-        #print "queryDataNPADateTimeSorted.shape=", queryDataNPADateTimeSorted[:,0].shape
+        #print "queryDataNPAdt.shape=", queryDataNPAdt[:,0].shape
         #print "longitudes.shape=", longitudes.shape
 
-        # 2-dimensional numpy array [  [id, utc-time, X-coord, Y-coord, longitude, latitude ], .. ] sorted by utc time
-        self.queryDataNPAdtsLL = np.vstack(( queryDataNPADateTimeSorted[:,0], queryDataNPADateTimeSorted[:,1], 
-                                        queryDataNPADateTimeSorted[:,2], queryDataNPADateTimeSorted[:,3], 
-                                        longitudes,latitudes)).T
+        # self.queryDataNPAdtsLL 2-dimensional numpy array [  [id, utc-time, utc-time-str, X-coord, Y-coord, longitude, latitude ], .. ] 
+        #self.queryDataNPAdtsLL = np.vstack(( queryDataNPAdt[:,0], queryDataNPAdt[:,1], queryDataNPAdt[:,2], 
+        #                                queryDataNPAdt[:,3], queryDataNPAdt[:,4], 
+        #                                longitudes,latitudes)).T
+        # self.queryDataNPAdtsLL: 2-dimensional numpy array [  [id, utc-time, longitude, latitude ], .. ] 
+        self.queryDataNPAdtsLL = np.vstack(( queryDataNPAdt[:,0], queryDataNPAdt[:,1], 
+                                            longitudes,latitudes)).T
         if self.verbose and self.verboseLevel>=10:
-            self.CLASSPRINT("queryDataNPADateTimeSorted:")
+            self.CLASSPRINT("queryDataNPAdt:")
             arrayDims = self.queryDataNPAdtsLL.shape
-            for i in xrange(arrayDims[0]):
-                self.CLASSPRINT(list(self.queryDataNPAdtsLL[i,:]))
+            #for i in xrange(arrayDims[0]):
+            for i in xrange(10):
+                #printProgress("%s" %( pprint.pformat(str(self.queryDataNPAdtsLL[i][:]), width=200) ) )
+                printProgress("%s" %( pprint.pformat(self.queryDataNPAdtsLL[i][:], width=200) ) )
+                
         return
+
+    def WriteFullQueryDataToTmpFile(self,  tmpFileName):
+        self.CLASSPRINT(' Writing queryDataNPAdtsLL: to the temporary file..%s' %(tmpFileName))
+        #headerTextTmpFile =  "id, utc-time, utc-time-str, X-coord, Y-coord, longitude, latitude"  # 2-dimensional numpy array sorted by utc time
+        headerTextTmpFile =  "id, utc-time, longitude, latitude"  # 2-dimensional numpy array sorted by utc time
+        np.savetxt(tmpFileName, self.queryDataNPAdtsLL, fmt='%s', delimiter=',', comments='', header=headerTextTmpFile)
+        if self.verbose and  self.verboseLevel>=10:
+            printProgress( "self.queryDataNPAdtsLL[:10] =")
+            for i in xrange(10):            
+                #printProgress("%s" %( pprint.pformat(str(self.queryDataNPAdtsLL[i][:]), width=200) ) )
+                printProgress("%s" %( pprint.pformat(self.queryDataNPAdtsLL[i][:], width=200) ) )
+            
+    def GetTotalNumberOfCSVrows(self):
+        return self.queryDataNPAdtsLL.shape[0]
+        
+    def ReadFullQueryDataFromTmpFile(self,  tmpFileName, startAtRow = 0, readRows=-1):
+        #headerTextTmpFile =  "id, utc-time, utc-time-str, X-coord, Y-coord, longitude, latitude"  # 2-dimensional numpy array sorted by utc time
+        headerTextTmpFile =  "id, utc-time, longitude, latitude"  # 2-dimensional numpy array sorted by utc time            
+
+        headers = ["id","utc-time", "longitude", "latitude"]
+        dtypes = { "id": int, "utc-time": datetime, "longitude": float, "latitude": float}
+        parse_dates = ['utc-time']
+            
+        if readRows>0:            
+            self.CLASSPRINT(' Reading queryDataNPAdtsLL: from the temporary file: %s; startAtRow = %d, readRows=%d' %(tmpFileName, startAtRow, readRows))
+            #dataTmpCSV = np.recfromtxt(tmpFileName, skip_header=1 + startAtRow, max_rows = readRows, comments="#", dtype="|S300",  delimiter=',')
+            #dataTmpCSV = np.recfromtxt(tmpFileName, skip_header=1 + startAtRow, max_rows = readRows, comments="#", dtype='int,datetime64,float,float',  delimiter=',')
+            dataTmpCSV = pd.read_csv(tmpFileName, sep=',', header=None, skiprows=1+startAtRow, nrows=readRows, names=headers, dtype=dtypes, parse_dates=parse_dates)
+        else:
+            self.CLASSPRINT(' Reading queryDataNPAdtsLL: from the output file: %s; startAtRow = %d, whole-file-read' %(tmpFileName, startAtRow))
+            #dataTmpCSV = np.recfromtxt(tmpFileName, skip_header=1, comments="#", dtype="|S300",  delimiter=',')
+            #dataTmpCSV = np.recfromtxt(tmpFileName, skip_header=1, comments="#", dtype='int,datetime64,float,float',  delimiter=',')
+            #date_parser = pd.datetools.to_datetime            
+            dataTmpCSV = pd.read_csv(tmpFileName, sep=',', header=None, skiprows=1+startAtRow, names=headers, dtype=dtypes, parse_dates=parse_dates)
+        
+        self.queryDataNPAdtsLL = dataTmpCSV.values[:]
+        printProgress( "self.queryDataNPAdtsLL.shape="+str(self.queryDataNPAdtsLL.shape) )
+        
+        if self.verbose and  self.verboseLevel>=10:
+            printProgress( "len(dataTmpCSV)=%d"%len(dataTmpCSV) )
+            printProgress( "self.queryDataNPAdtsLL[:10] =" )
+            for i in xrange(10):
+                #printProgress("%s" %( pprint.pformat(str(self.queryDataNPAdtsLL[i][:]), width=200) ) )
+                printProgress("%s" %( pprint.pformat(self.queryDataNPAdtsLL[i][:], width=200) ) )
+        '''
+        self.queryDataNPAdtsLL[:10] = 
+        [[0 numpy.datetime64('2006-01-03T00:10:00.000000') 4.752309977868518 52.63724732465345]
+         [1 numpy.datetime64('2006-01-07T06:50:00.000000') 4.513847878535973 52.048915465574154]
+         [2 numpy.datetime64('2006-01-21T10:10:00.000000') 4.863868133591141 52.36595546503313]
+         [3 numpy.datetime64('2006-01-13T11:45:00.000000') 4.470192057036912 51.95222282937921]
+         [4 numpy.datetime64('2006-01-09T17:09:00.000000') 5.890625864700398 50.91224069570073]
+         [5 numpy.datetime64('2006-01-03T07:15:00.000000') 6.89515403058042 52.19821169074023]
+         [6 numpy.datetime64('2006-01-12T16:57:00.000000') 5.66439893004735 50.85429803479775]
+         [7 numpy.datetime64('2006-01-24T16:00:00.000000') 5.710791456635714 50.861504457973496]
+         [8 numpy.datetime64('2006-01-13T21:49:00.000000') 5.433339456169923 51.418358706500634]
+         [9 numpy.datetime64('2006-01-30T08:57:00.000000') 3.9207341453872204 51.65060526354358]]
+        '''
+        
+            
 
     def GetTimeRangeOfData(self):
         '''
@@ -426,8 +505,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                         "maxDateTime": "2006-01-30 08:57:00 UTC" }
         Note: The actual range is compute in function: ReadInputCSV()
         '''
-        dataRange =  {  "minDateTime": self.minDateTime,
-                        "maxDateTime": self.maxDateTime }
+        dataRange =  {  "minDateTime": self.minDateTime_str,
+                        "maxDateTime": self.maxDateTime_str }
         return dataRange
     
     def GetLatLonBBOXOfData(self):
@@ -450,28 +529,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         if not self.metaCSVdict:
             return None
         return self.projFuncDefstring
-        
 
-    def UnProject2LongitudeLatitudes(self, xcoords, ycoords):
-        LL  = self.projectionFunction(xcoords, ycoords,inverse=True)
-        longitudes = LL[0]
-        latitudes = LL[1]
-        return (longitudes,latitudes) # tuple, vector
-
-    def ProjectLongitudeLatitudes(self, longitudes,latitudes):
-        XYcoords  = self.projectionFunction(longitudes,latitudes,inverse=False)
-        xcoords = XYcoords[0]
-        ycoords = XYcoords[1]  
-        return (xcoords, ycoords) # tuple, vector
-
-    def ProjectLonLatSinglePoint(self, lon, lat):
-        # Usage:
-        # (x,y) = ProjectLonLatSinglePoint(52.379293, 4.899645)
-        XYcoords  = self.projectionFunction([lon,],[lat,],inverse=False)
-        xcoords = XYcoords[0]
-        ycoords = XYcoords[1]  
-        return (xcoords[0],ycoords[0])
-            
     def WrangleMeteoParameter(self, parameterName):
         self.WrangleMeteoParameterDummy(parameterName)
         
@@ -484,7 +542,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         testinOnly = False
         if testinOnly:
             # This MUST in the produced merged result-data give columns of growing numbers 0,1,2,3,4, ....
-            self.meteoDataStore[parameterName] = self.queryDataNPADateTimeSorted[:,0]
+            self.meteoDataStore[parameterName] = self.queryDataNPAdtsLL[:,0]
+            #self.meteoDataStore[parameterName] = self.queryDataNPAdt[:,0]
             # Obviously the row-of-code below will not give the right order as during wrangling-process
             # because at this stage is everything sorted according utc-time
             #self.meteoDataStore[parameterName] = np.arange(dims[0]) 
@@ -509,18 +568,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         if self.verbose:
             self.CLASSPRINT("WrangleMeteoParameterDummy(%s): meteoDataStore[%s]="%(parameterName,parameterName),self.meteoDataStore[parameterName].shape)
 
-
-    '''
-    self.queryDataNPAdtsLL = 
-     0      1                            2         3            4             5
-     id,  datetime-utc,                 xcoord, ycoord,         lon,        , lat 
-    ['0', '2006-01-03 00:10:00 UTC', '111998.0', '516711.0', '4.80027528245', '48.9994215447']
-    ['5', '2006-01-03 07:15:00 UTC', '258048.0', '468749.0', '6.83409023748', '50.304600877']
-    ['1', '2006-01-07 06:50:00 UTC', '95069.0', '451430.0', '4.57160470779', '48.8458532221']
-    ['4', '2006-01-09 17:09:00 UTC', '190371.475', '324748.091', '5.87787666049', '49.7043104226']
-    ['6', '2006-01-12 16:57:00 UTC', '174487.0', '318218.0', '5.6569228243', '49.5622693229']
-    '''
-    
+   
     
     def PrintArray(self,arr, arrayName=""):
         dims = arr.shape
@@ -560,40 +608,37 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             headerTextOutput += ",%s" %k
 
         self.CLASSPRINT(' Working on reassembledResultArray..' )
+
+        # self.queryDataNPAdtsLL: 2-dimensional numpy array [  [id, utc-time, longitude, latitude ], .. ] 
             
         rowId = 0
         # NOTE: The array is sorted according DATE-TIME
-        indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]
-        #print "indicesqueryDataNPAdtsLL=", indicesqueryDataNPAdtsLL.astype(np.int)
-        
-        # SORT ACCORDING THE INDEX-reference (== the original row-order from CSV):
-        # This is a VITAL part !!! Don't touch this unless you are sure what you are doing with numpy
-        # Note: We cannot use np.lexsort ! As it will give the folowing order: '0','1','10','11','12',..,'19','2','20'
-        #indexSort = np.lexsort((self.queryDataNPAdtsLL[:,0],))  # DON'T use this here!
-        
-        indexSort = np.argsort(self.queryDataNPAdtsLL[:,0].astype(np.int))
-        #print indexSort
-        #self.PrintArray(indexSort.reshape(len(indexSort),1), arrayName="indexSort")
-        queryDataNPAdtsLLIdxSorted = self.queryDataNPAdtsLL[indexSort]
-        indicesqueryDataNPAdtsLLIdxSorted =  (queryDataNPAdtsLLIdxSorted[:,0]).astype(np.int)
-        #print "indicesqueryDataNPAdtsLLIdxSorted=", indicesqueryDataNPAdtsLLIdxSorted
-        
+        indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]            
         if self.verbose and self.verboseLevel>=10:
-            self.PrintArray(queryDataNPAdtsLLIdxSorted, arrayName="queryDataNPAdtsLLIdxSorted")
+            self.PrintArray(self.queryDataNPAdtsLL, arrayName="self.queryDataNPAdtsLL")
             self.PrintArray(dataOut, arrayName="dataOut")
             #print "dataOut.shape=", dataOut.shape
         
         meteoDataStoreNpArray = np.array([])
         
-        lonNpArrayIdxSorted = queryDataNPAdtsLLIdxSorted[:,[4]]
-        latNpArrayIdxSorted = queryDataNPAdtsLLIdxSorted[:,[5]]
+
+        # add utc-date-time column
+        utcTimeNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[1]]
+        self.CLASSPRINT(' Adding result array: %s' %('utc-date-time') )
+        meteoDataStoreNpArray = utcTimeNpArrayIdxSorted.reshape(utcTimeNpArrayIdxSorted.shape[0],1)
+
+        lonNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[2]]
+        latNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[3]]
 
         #self.PrintArray(lonNpArrayIdxSorted, arrayName="lonNpArrayIdxSorted")
         #self.PrintArray(latNpArrayIdxSorted, arrayName="latNpArrayIdxSorted")
 
         # add longitude
         self.CLASSPRINT(' Adding result array: %s' %('longitude') )
-        meteoDataStoreNpArray = lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)
+        if  meteoDataStoreNpArray.size==0:
+            meteoDataStoreNpArray = lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)
+        else:
+            meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)) )
         # add latitude
         self.CLASSPRINT(' Adding result array: %s' %('latitude') )
         meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, latNpArrayIdxSorted.reshape(latNpArrayIdxSorted.shape[0],1)) )
@@ -605,7 +650,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             if  meteoDataStoreNpArray.size==0:
                 meteoDataStoreNpArray = dataParamArray[indexSort].reshape(dataParamArray.shape[0],1)
             else:
-                meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, dataParamArray[indexSort].reshape(dataParamArray.shape[0],1)) )
+                meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, dataParamArray.reshape(dataParamArray.shape[0],1)) )
 
         if self.verbose and self.verboseLevel>=10:
             self.PrintArray(meteoDataStoreNpArray, arrayName="meteoDataStoreNpArray")       
@@ -618,12 +663,12 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                 self.PrintArray(reassembledResultArray, arrayName="reassembledResultArray")
         
         if self.verbose and self.verboseLevel>=10:
-            self.PrintArrayJoinedAsString(reassembledResultArray, arrayName="reassembledResultArray")
+            self.PrintArrayJoinedAsString(reassembledResultArray.astype(np.str), arrayName="reassembledResultArray")
                         
         if onlyTesting:
             printProgress("** Slower control procedure: should give same as above .. ***")
             # write the header
-            ftxt = open(self.outputCSVfile,"wt")           
+            ftxt = open(self.outputCSVfile,"wt")
             ftxt.writelines(headerTextOutput+"\n")
             if self.verbose:
                 printProgress(headerTextOutput)
@@ -658,6 +703,135 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             np.savetxt(self.outputCSVfile, reassembledResultArray, fmt='%s', delimiter=self.delimiter, comments='', header=headerTextOutput)
             # time: 11.780u 6.344s 0:18.13 99.9%	0+0k 0+50240io 0pf+0w
 
+
+    def WriteCSVHeader(self, fieldList):
+        '''
+        WriteCSVHeader(fieldList = ["utc-time","longitude","latitude", ...] )
+        JoinBulkResults(tempFileList)
+        '''
+        self.ReadCSVHeader()
+        headerTextOutput = self.headerText[:].rstrip('\n')
+        for k in fieldList:
+            headerTextOutput += ",%s" %k
+
+        if os.path.exists(self.outputCSVfile):
+            os.remove(self.outputCSVfile)
+
+        ftxt = open(self.outputCSVfile,'wt')
+        ftxt.writelines([headerTextOutput+"\n"])
+        ftxt.close()
+
+        if self.verbose:
+            self.CLASSPRINT( "headerText=\n%s"  %(headerTextOutput))
+
+
+    def JoinBulkResults(self, tempFileList, removeTempFiles=True):
+        ftxt = open(self.outputCSVfile,'a')
+        for tempfile in tempFileList:
+            if self.verbose:
+                self.CLASSPRINT( "Appending %s to %s"  %(tempfile, self.outputCSVfile))
+            tempfileHandle = open(tempfile,'rU')
+            for line in tempfileHandle:
+                ftxt.write(line)
+            tempfileHandle.close()
+        ftxt.close()
+        if removeTempFiles:
+            for tempfile in tempFileList:
+                    try:
+                        os.remove(tempfile)
+                    except:
+                        pass
+        self.CLASSPRINT(' Finished. Produced output: %s'%(self.outputCSVfile))
+
+
+    def ProduceBulkOutput(self, tmpBulkFileName, bulkNr, startAtRow, readRows, exportLonLat = True):
+        self.CLASSPRINT(' Producing bulkNr. %d, startAtRow=%d, readRows=%d into tempFile: %s' %(bulkNr, startAtRow, readRows,tmpBulkFileName) )
+        
+        self.CLASSPRINT(' Reading partially [%d:%d] inputCSVfile: %s' %(startAtRow, readRows, self.inputCSVfile) )
+        self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines + startAtRow, max_rows = readRows, comments="#", dtype="|S300", delimiter=self.delimiter)
+               
+        #onlyTesting = True
+        onlyTesting = False
+        if onlyTesting:
+            if self.limitTo>0:
+                dataOut = self.dataUnsortedStr[:self.limitTo,1:]
+            else:
+                dataOut = self.dataUnsortedStr[:,1:]
+        else:
+            if self.limitTo>0:
+                dataOut = self.dataUnsortedStr[:self.limitTo]
+            else:
+                dataOut = self.dataUnsortedStr
+
+        meteoDataStoreKeys =  self.meteoDataStore.keys()
+        
+           
+        headerTextOutput = "" # temporary bulk-output files have NO header!        
+
+        self.CLASSPRINT(' Working on reassembledResultArray..' )
+
+        # self.queryDataNPAdtsLL: 2-dimensional numpy array [  [id, utc-time, longitude, latitude ], .. ] 
+            
+        rowId = 0
+        indicesqueryDataNPAdtsLL =  self.queryDataNPAdtsLL[:,0]            
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArray(self.queryDataNPAdtsLL, arrayName="self.queryDataNPAdtsLL")
+            self.PrintArray(dataOut, arrayName="dataOut")
+            #print "dataOut.shape=", dataOut.shape
+        
+        meteoDataStoreNpArray = np.array([])
+        
+
+        # add utc-date-time column
+        
+        utcTimeNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[1]]
+        self.CLASSPRINT(' Adding result array: %s' %('utc-date-time') )
+        meteoDataStoreNpArray = utcTimeNpArrayIdxSorted.reshape(utcTimeNpArrayIdxSorted.shape[0],1)
+        printProgress( "utcTimeNpArrayIdxSorted.shape="+str(utcTimeNpArrayIdxSorted.shape) )
+
+        lonNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[2]]
+        latNpArrayIdxSorted = self.queryDataNPAdtsLL[:,[3]]
+
+        #self.PrintArray(lonNpArrayIdxSorted, arrayName="lonNpArrayIdxSorted")
+        #self.PrintArray(latNpArrayIdxSorted, arrayName="latNpArrayIdxSorted")
+
+        # add longitude
+        self.CLASSPRINT(' Adding result array: %s' %('longitude') )
+        if  meteoDataStoreNpArray.size==0:
+            meteoDataStoreNpArray = lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)
+        else:
+            meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, lonNpArrayIdxSorted.reshape(lonNpArrayIdxSorted.shape[0],1)) )
+        # add latitude
+        self.CLASSPRINT(' Adding result array: %s' %('latitude') )
+        meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, latNpArrayIdxSorted.reshape(latNpArrayIdxSorted.shape[0],1)) )
+       
+        for k in meteoDataStoreKeys:
+            dataParamArray = self.meteoDataStore[k]
+            #print "meteoDataStore[k=%s]: dataParamArray.shape="%k, dataParamArray.shape
+            self.CLASSPRINT(' Adding result array: %s' %(k) )            
+            if  meteoDataStoreNpArray.size==0:
+                meteoDataStoreNpArray = dataParamArray[indexSort].reshape(dataParamArray.shape[0],1)
+            else:
+                meteoDataStoreNpArray = np.hstack((meteoDataStoreNpArray, dataParamArray.reshape(dataParamArray.shape[0],1)) )
+
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArray(meteoDataStoreNpArray, arrayName="meteoDataStoreNpArray")       
+            
+        printProgress( "dataOut.shape="+str(dataOut.shape) )          
+        printProgress( "meteoDataStoreNpArray.shape="+str(meteoDataStoreNpArray.shape) )
+        
+        reassembledResultArray = np.hstack((dataOut,meteoDataStoreNpArray))        
+        printProgress( "reassembledResultArray.shape="+str(reassembledResultArray.shape) )
+
+        if onlyTesting:
+            if self.verbose and self.verboseLevel>=10:          
+                self.PrintArray(reassembledResultArray, arrayName="reassembledResultArray")
+        
+        if self.verbose and self.verboseLevel>=10:
+            self.PrintArrayJoinedAsString(reassembledResultArray.astype(np.str), arrayName="reassembledResultArray")
+                        
+        self.CLASSPRINT(' Writing reassembledResultArray: to the output file..')            
+        np.savetxt(tmpBulkFileName, reassembledResultArray, fmt='%s', delimiter=self.delimiter, comments='', header="")
 
 
     

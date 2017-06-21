@@ -34,7 +34,7 @@ class mySqlDataObject(dataObjectBase):
         # It uses DB credentials as defined in file: dbConnect/configDB.json
         # For the time-being  "dbConnect/configDB.json"
         # !!! THIS file is NOT part of the repository !!!
-        # Install this DB-credential file manually.        
+        # Install the DB-credential file manually.
         self.dbConfig = dbConfig
 
     def InitDBConnection(self):
@@ -75,7 +75,7 @@ class mySqlDataObject(dataObjectBase):
         #print npData.shape, npData
         ## SORT ACCORDING THE STATION NAME:
         ## create sorted list of indices. ':' => vertical dimension
-        indexSort = np.argsort(npData[:,0].astype(np.str))        
+        indexSort = np.argsort(npData[:,0].astype(np.str))
         ## SORT ACCORDING THE STATION ID:
         #indexSort = np.argsort(npData[:,1].astype(np.int))        
         self.stationsList = npData[indexSort] ## create sorted 2-dimensional array        
