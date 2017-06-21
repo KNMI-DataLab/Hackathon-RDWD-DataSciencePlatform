@@ -2,8 +2,9 @@ import sys
 import os,re
 import pprint
 
-
 import json
+import csvTooling as csvt
+
 #import jsonSyntaxTester as jsTstr
 
 
@@ -111,10 +112,10 @@ def _decode_dict(data):
 def printHandleJsonValidity(jsonOK, errMsg):
     #print "printHandleJsonValidity():", (jsonOK, errMsg)
     if jsonOK:
-        #w3dxLog.PrintInfo("JSON is OK")
+        #csvt.printProgress("JSON is OK")
         pass
     else:
-        w3dxLog.PrintError("JSON is WRONG!\n%s" %errMsg)
+        csvt.printProgress("JSON is WRONG!\n%s" %errMsg)
 
 ### Function: ReadJsonConfigurationFromFile:  ###
 def ReadJsonConfigurationFromFile(jsonFileName):
@@ -128,7 +129,7 @@ def ReadJsonConfigurationFromFile(jsonFileName):
         #print jsonStr
         #checkJsonValidity(jsonStringOrDict, handlePrintFunc=None, _hookObject=None)
         if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
-            w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
+            csvt.printProgress("jsonStr is NOT VALID JSON!\n")
             #sys.exit(1)
             raise ValueError('JSON-INVALID')            
             return None
@@ -152,7 +153,7 @@ def ReadJsonConfigurationFromFile(jsonFileName):
                         
         #  print jsonStr
         if not checkJsonValidity(jsonStr, handlePrintFunc=printHandleJsonValidity, _hookObject=_decode_dict):
-            w3dxLog.PrintError("jsonStr is NOT VALID JSON!\n")
+            csvt.printProgress("jsonStr is NOT VALID JSON!\n")
             #print "ERROR: jsonStr is NOT VALID JSON!\n"
             #sys.exit(1)
             raise ValueError('JSON-INVALID')            
