@@ -46,8 +46,8 @@ class WrangleProcess(WPSProcess):
         self.percentComplete = 0
 
     def statusCallback(self, message, percentComplete=0):
-        # self.percentComplete += percentComplete
-        self.percentComplete = percentComplete
+        self.percentComplete += percentComplete
+        #self.percentComplete = percentComplete
         if self.percentComplete >= 100: self.percentComplete = 100
         self.status.set(message, self.percentComplete)
         
