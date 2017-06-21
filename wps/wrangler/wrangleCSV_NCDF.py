@@ -302,7 +302,9 @@ class dataWranglerProcessor():
         
         self.totalNumberOfCSVrows = self.csvDataObj.GetTotalNumberOfCSVrows()
         self.nproc = 1
-        self.percentFraction = 0.01
+        self.percentFraction = 0.01  # 0.01% of 150.000 rows => 10000 files of 15 rows in each file
+        #self.percentFraction = 0.1  # 0.1% of 150.000 rows => 1000 files of 150 rows in each file
+        #self.percentFraction = 1  # 1% of 150.000 rows => 100 files of 1500 rows in each file
         self.percentParts = int( 100/self.percentFraction )
         self.processingBulkSize = self.totalNumberOfCSVrows / self.percentParts    # number of rows representing 1% (0.1%,0.01%) of total
 
@@ -330,9 +332,9 @@ class dataWranglerProcessor():
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
             if self.limitTo > 0:
-                self.callStatusCallback("Calculating. rows processed: %d" % (rowsProcessed), (float(rowsProcessed) / float(self.limitTo)) * 100.0)
+                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo), (float(rowsProcessed) / float(self.limitTo)) * 100.0)
             else:
-                self.callStatusCallback("Calculating. rows processed: %d" % (rowsProcessed), bulkNr*self.percentFraction)
+                self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows), bulkNr*self.percentFraction)
             if self.limitTo>0 and rowsProcessed >= self.limitTo:
                 break
         

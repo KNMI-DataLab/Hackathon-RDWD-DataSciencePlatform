@@ -76,7 +76,7 @@ class WrangleProcess(WPSProcess):
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
             dwp.ReadInputCSV()
-            self.status.set("Starting the wrangling process. Limit: %d" % limit, 0)
+            self.status.set("Starting the wrangling process.", 0)
             dwp.WrangleWithNetCdfData({"outputCSV":basket+"/"+outputFileName})
         except Exception, e:
             self.status.set(e, 500)
