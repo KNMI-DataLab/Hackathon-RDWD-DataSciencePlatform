@@ -3,14 +3,14 @@
 "datatowrangle":
  [ 
    {
-#    "dataURL":  "/visdataATX/hackathon/radarFullWholeData.nc",
-     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc",
+    "dataURL":  "/visdataATX/hackathon/radarFullWholeData.nc",
+#     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc",
 #    r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc"
      "fields": ["precipitation_amount"]
    }
 #   ,
 #   {
-#     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc",
+#     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/10minTempStationData.nc",
 #     "fields": ["temperature"]
 #   }#  
  ]
