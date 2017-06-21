@@ -304,11 +304,11 @@ class dataWranglerProcessor():
         self.nproc = 1
         self.percentFraction = 0.01
         self.percentParts = int( 100/self.percentFraction )
-        
-        if self.limitTo>0:
+        self.processingBulkSize = self.totalNumberOfCSVrows / self.percentParts    # number of rows representing 1% (0.1%,0.01%) of total
+
+        if self.limitTo>0 and self.limitTo < self.processingBulkSize:
             self.processingBulkSize = self.limitTo
-        else:
-            self.processingBulkSize = self.totalNumberOfCSVrows / self.percentParts    # number of rows representing 1% (0.1%,0.01%) of total
+            
         # split temporary request data into #nr bulks
         bulkNr = 0
         rowsProcessed = 0
@@ -329,8 +329,11 @@ class dataWranglerProcessor():
             self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
-            self.callStatusCallback("Calculating", bulkNr*self.percentFraction)
-            if self.limitTo>0 and rowsProcessed > self.limitTo:
+            if self.limitTo > 0:
+                self.callStatusCallback("Calculating. rows processed: %d" % (rowsProcessed), (float(rowsProcessed) / float(self.limitTo)) * 100.0)
+            else:
+                self.callStatusCallback("Calculating. rows processed: %d" % (rowsProcessed), bulkNr*self.percentFraction)
+            if self.limitTo>0 and rowsProcessed >= self.limitTo:
                 break
         
         self.csvDataObj.WriteCSVHeader(fieldList = parameterList )

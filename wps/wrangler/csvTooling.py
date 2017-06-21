@@ -116,7 +116,11 @@ class csvDataObject(dataObjectBase):
         self.outputCSVfile = outputCSV
         
     def ApplyLimit(self,limitTo):
-        self.limitTo = limitTo
+        ## When scanning, we need to scan the entire file, so
+        ## don't honor the limit here, only when actually wrangling
+        ## in the WrangleWithNetCdfData of dataWranglerProcessor.
+        pass
+        #self.limitTo = limitTo
 
     '''
 array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
@@ -758,7 +762,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.CLASSPRINT(' Producing bulkNr. %d, startAtRow=%d, readRows=%d into tempFile: %s' %(bulkNr, startAtRow, readRows,tmpBulkFileName) )
         
         self.CLASSPRINT(' Reading partially [%d:%d] inputCSVfile: %s' %(startAtRow, readRows, self.inputCSVfile) )
-        self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines + startAtRow, max_rows = readRows, comments="#", dtype="|S300", delimiter=self.delimiter)
+        self.dataUnsortedStr = np.recfromtxt(self.inputCSVfile, skip_header=self.numHeaderLines + startAtRow,
+                                             max_rows = readRows, comments="#", dtype="|S300", delimiter=self.delimiter)
                
         #onlyTesting = True
         onlyTesting = False
