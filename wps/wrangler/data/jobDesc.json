@@ -8,10 +8,10 @@
 #    r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc"
      "fields": ["precipitation_amount"]
    }
-#   ,
-#   {
-#     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/10minTempStationData.nc",
-#     "fields": ["temperature"]
-#   }#  
+   ,
+   {
+     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/10minTempStationData.nc",
+     "fields": ["temperature"]
+   }
  ]
 }

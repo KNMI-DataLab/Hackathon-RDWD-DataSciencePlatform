@@ -21,6 +21,9 @@ class ncdfDataObject(dataObjectBase):
         self.verbose = True
         self.verboseLevel = 0       
         self.projFuncDefstring =""
+        # self.dataType = "GRID-DATA" ; num-dimension == 3: time(time,lat,lon)
+        # self.dataType = "STATION-DATA"; num-dimension == 32: (time,station)
+        self.dataType = "GRID-DATA"
         
     def __del__(self):
         #self.CLASSPRINT('..Destructor()..')
@@ -60,41 +63,79 @@ class ncdfDataObject(dataObjectBase):
         self.CLASSPRINT("minDateTime=%s, maxDateTime=%s, deltaTime=%d" %(self.minDateTime_str, self.maxDateTime_str, self.deltaTime)  )
         self.CLASSPRINT("##########################################################")
         
-        self.xDim = self.metaData.variables['x'].shape[0]
-        self.yDim = self.metaData.variables['y'].shape[0]
-        # 1D dimensional arrays; x/y-axes only
-        self.xAxis = self.metaData.variables['x'][:]
-        self.yAxis = self.metaData.variables['y'][:]
-        
-        # TODO:  Check if the data is grid-data or point-data!
-        # The code below is grid-data specific.
-        # We have to make a 2D grid from the x/y-axes.
-        # meschgrid works like this:
-        # gridded_lons, gridded_lats = np.meshgrid(lons_axis, lats_axis)
-        self.xcoords, self.ycoords  = np.meshgrid(self.xAxis, self.yAxis)
-        #print self.xcoords.shape, self.xcoords
-        #print self.ycoords.shape, self.ycoords
-        #print self.xcoords.shape, self.ycoords.shape
-        
         # aquire projection (proj4) string
-        self.projFuncDefstring = self.metaData.variables['projection'].proj4_params
-        self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
+        try:
+            self.projFuncDefstring = self.metaData.variables['projection'].proj4_params
+            self.projectionFunction = pyproj.Proj(self.projFuncDefstring)
+        except:
+            # If there is NO projection string we will assume LAT-LON (cylindrical) projection WGS94
+            #self.projFuncDefstring = "stere +lat_0=90 +lon_0=0.0 +lat_ts=60.0 +a=6378.388 +b=6356.912 +x_0=0 +y_0=0 +to +proj=latlong +datum=WGS84"
+            pass
 
-        # Both longitudes and latitudes are 2D arrays of the (RADAR) grid
-        (self.longitudes,self.latitudes) = self.UnProject2LongitudeLatitudes(self.xcoords, self.ycoords)
+        # DETECT: If the data is GRID-DATA or STATION-DATA
+        # self.dataType = "GRID-DATA" ; num-dimension == 3: time(time,lat,lon)
+        # self.dataType = "STATION-DATA"; num-dimension == 32: (time,station)
+        
+        try:
+            self.xDim = self.metaData.variables['x'].shape[0]
+            self.yDim = self.metaData.variables['y'].shape[0]
+            self.dataType = "GRID-DATA" 
+        except:
+            try:
+                self.lonDim = self.metaData.variables['lon'].shape[0]
+                self.latDim = self.metaData.variables['lat'].shape[0]
+                self.dataType = "STATION-DATA"
+            except:
+                self.CLASSPRINT("**********************************************")
+                self.CLASSPRINT("* ERROR: This is NetCDF DATA NOT SUPPORTED ! *")
+                self.CLASSPRINT("**********************************************")
+                sys.exit(1)
 
-        #print self.longitudes.shape, self.longitudes
-        #print self.latitudes.shape, self.latitudes
-        #print self.longitudes.shape, self.latitudes.shape
-        
-        self.gridSize = self.xDim * self.yDim
-        # Both gives same result ...
-        #np.hstack((self.longitudes.reshape(self.gridSize,1),self.latitudes.reshape(self.gridSize,1)))
-        #np.vstack((self.longitudes,self.latitudes)).T
-        
-        # Flatten 2d arrays of lons & lats into 1d arrays and stack it into one 2d array [  [lon,lat] ... x self.gridSize .. ]
-        self.lonLatStacked = np.hstack((self.longitudes.reshape(self.gridSize,1),self.latitudes.reshape(self.gridSize,1)))
-        #print self.lonLatStacked
+                
+        if self.dataType == "STATION-DATA":
+            try:
+                (self.longitudes,self.latitudes) = (self.metaData.variables['lon'][:],self.metaData.variables['lat'][:])
+                self.gridSize = self.lonDim
+                # Stack lons & lats  into one 2d array [  [lon,lat] ... x self.gridSize .. ]
+                self.lonLatStacked = np.hstack((self.longitudes.reshape(self.gridSize,1),self.latitudes.reshape(self.gridSize,1)))
+                #print self.lonLatStacked
+            except:
+                self.CLASSPRINT("*************************************************")
+                self.CLASSPRINT("* ERROR: Cannot obtain (longitudes, latitudes)! *")
+                self.CLASSPRINT("************************************************")
+                sys.exit(1)
+                
+            
+        if self.dataType == "GRID-DATA":
+            # 1D dimensional arrays; x/y-axes only
+            self.xAxis = self.metaData.variables['x'][:]
+            self.yAxis = self.metaData.variables['y'][:]
+            
+            # TODO:  Check if the data is grid-data or point-data!
+            # The code below is grid-data specific.
+            # We have to make a 2D grid from the x/y-axes.
+            # meschgrid works like this:
+            # gridded_lons, gridded_lats = np.meshgrid(lons_axis, lats_axis)
+            self.xcoords, self.ycoords  = np.meshgrid(self.xAxis, self.yAxis)
+            #print self.xcoords.shape, self.xcoords
+            #print self.ycoords.shape, self.ycoords
+            #print self.xcoords.shape, self.ycoords.shape
+
+            # Both longitudes and latitudes are 2D arrays of the (RADAR) grid
+            (self.longitudes,self.latitudes) = self.UnProject2LongitudeLatitudes(self.xcoords, self.ycoords)
+
+            #print self.longitudes.shape, self.longitudes
+            #print self.latitudes.shape, self.latitudes
+            #print self.longitudes.shape, self.latitudes.shape
+            
+            self.gridSize = self.xDim * self.yDim
+            # Both gives same result ...
+            #np.hstack((self.longitudes.reshape(self.gridSize,1),self.latitudes.reshape(self.gridSize,1)))
+            #np.vstack((self.longitudes,self.latitudes)).T
+            
+            # Flatten 2d arrays of lons & lats into 1d arrays and stack it into one 2d array [  [lon,lat] ... x self.gridSize .. ]
+            self.lonLatStacked = np.hstack((self.longitudes.reshape(self.gridSize,1),self.latitudes.reshape(self.gridSize,1)))
+            #print self.lonLatStacked
 
         ## Determine the bounding box.
         self.llbox_west = np.min(self.longitudes)
@@ -106,7 +147,10 @@ class ncdfDataObject(dataObjectBase):
         self.CLASSPRINT("*******************************************")
 
         self.CLASSPRINT("##########################################################")
-        self.CLASSPRINT("Grid-dimensions: ", (self.xDim, self.yDim) )
+        if self.dataType == "GRID-DATA":              
+            self.CLASSPRINT("Grid-dimensions: ", (self.xDim, self.yDim) )
+        elif self.dataType == "STATION-DATA":
+            self.CLASSPRINT("Dimensions: ", (self.lonDim) )        
         self.CLASSPRINT("LATLON-BBOX (west, east, north, south):", (self.llbox_west,self.llbox_east,self.llbox_north,self.llbox_south) )
         self.CLASSPRINT("##########################################################")
         
@@ -122,7 +166,11 @@ class ncdfDataObject(dataObjectBase):
         self.givenLon = lon
         self.givenLat = lat
         #  This works with 2D array self.lonLatStacked: [ [lon,lat], ... ]
-        printProgress("Computing distance %s: to lat-lon-grid [%dx%d]; gridSize=%d" %(str((lon, lat)),self.xDim,self.yDim,self.gridSize))
+        if self.dataType == "GRID-DATA":              
+            printProgress("Computing distance %s: to lat-lon-grid [%dx%d]; gridSize=%d" %(str((lon, lat)),self.xDim,self.yDim,self.gridSize))
+        elif self.dataType == "STATION-DATA":
+            printProgress("Computing distance %s: to lat-lon stations [%d]; gridSize=%d" %(str((lon, lat)),self.lonDim,self.gridSize))
+        
         idx = 0
         distArray = np.zeros(self.lonLatStacked.shape[0]).astype(np.float)
         for tupleLL in self.lonLatStacked:
@@ -140,13 +188,16 @@ class ncdfDataObject(dataObjectBase):
     def GetVariable(self, variableName):
         keylist = self.metaData.variables.keys()
         variableFound = None
-        for k in keylist:
-            try:
-                if self.metaData.variables[k].standard_name == variableName:
-                    #  self.metaData.variables['image1_image_data'].standard_name == variableName ..
-                    variableFound = self.metaData.variables[k]
-            except:
-                pass
+        if variableName in keylist:
+            variableFound = self.metaData.variables[variableName]
+        else:
+            for k in keylist:
+                try:
+                    if self.metaData.variables[k].standard_name == variableName:
+                        #  self.metaData.variables['image1_image_data'].standard_name == variableName ..
+                        variableFound = self.metaData.variables[k]
+                except:
+                    pass
         return variableFound
         
         
@@ -176,18 +227,33 @@ class ncdfDataObject(dataObjectBase):
         current shape = (1051776, 256, 256)
         filling on
         
-        ''' 
-        idX = dataIndex % self.xDim
-        idY = dataIndex / self.xDim
-        keylist = self.metaData.variables.keys()
-        variableFound = self.GetVariable(variableName)
-        if variableFound:
-            dataValue = variableFound[timeIndex][idY][idX]
-            printProgress("givenDateTime=%s, closestDateTimeIndex=%d, query(lon, lat)=%s, minDistanceDataIndex=%d, dataValue=%f %s"
-            %(str(self.givenDateTime), timeIndex, str((self.givenLon, self.givenLat)), dataIndex, float(dataValue), variableFound.units) )
-            return dataValue
+        '''        
+        if self.dataType == "GRID-DATA":       
+            idX = dataIndex % self.xDim
+            idY = dataIndex / self.xDim
+            keylist = self.metaData.variables.keys()
+            variableFound = self.GetVariable(variableName)
+            if variableFound:
+                dataValue = variableFound[timeIndex][idY][idX]  # grid data    (time,lat,lon)
+                printProgress("givenDateTime=%s, closestDateTimeIndex=%d, query(lon, lat)=%s, minDistanceDataIndex=%d, dataValue=%f %s"
+                %(str(self.givenDateTime), timeIndex, str((self.givenLon, self.givenLat)), dataIndex, float(dataValue), variableFound.units) )
+                return dataValue
+            else:
+                return None
+        elif self.dataType == "STATION-DATA":
+            idLon = dataIndex % self.lonDim
+            keylist = self.metaData.variables.keys()
+            variableFound = self.GetVariable(variableName)
+            if variableFound:
+                dataValue = variableFound[timeIndex][idLon]     # station data (time,station)
+                printProgress("givenDateTime=%s, closestDateTimeIndex=%d, query(lon, lat)=%s, minDistanceDataIndex=%d, dataValue=%f %s"
+                %(str(self.givenDateTime), timeIndex, str((self.givenLon, self.givenLat)), dataIndex, float(dataValue), variableFound.units) )
+                return dataValue
+            else:
+                return None
         else:
             return None
+
         
 
         
@@ -202,6 +268,30 @@ if __name__ == "__main__":  # ONLY for testing
     loggerName = csvT.loggerName
     csvT.InitializeWranglerLogger(csvT.logFileName)
     
+    ## TEST STATION DATA:
+    ndo = ncdfDataObject()
+    ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/10minTempStationData.nc")
+    ndo.OpenMetaData()
+    
+        
+    # MANUAL EXAMPLE of WRANGLING:
+    # 1) Identify the closest time 
+    fmt = '%Y-%m-%d %H:%M:%S %Z'
+    givenDateTime = datetime.strptime('2010-07-14 16:33:00 UTC',fmt)
+    #givenDateTime = datetime.strptime('2006-01-03 00:10:00 UTC',fmt)
+    closestDateTimeIndex = ndo.FindClosestDateTimeIndex(givenDateTime)
+    
+    # 2) Find the closest grid-point of the data
+    (lon, lat) = (5.2, 52.0)
+    #(lon, lat) = (4.7523099778699995, 52.637247324700006)
+    minDistanceDataIndex = ndo.FindClosestLonLatPointIndex(lon, lat)
+    
+    # 3) Get the data the closest-time and the closest grid-point
+    dataValue = ndo.GetDataAtIndex(closestDateTimeIndex, minDistanceDataIndex, variableName="temperature")
+    
+    #sys.exit(0)
+   
+    ## TEST GRID-DATA:
     ndo = ncdfDataObject()
     #ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc")
     ndo.SetDataURL(r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc")
@@ -226,18 +316,6 @@ if __name__ == "__main__":  # ONLY for testing
     
     sys.exit(0)
     
-    variableFound = ndo.GetVariable(variableName="precipitation_amount")
-    # same as above
-    #variableFound = ndo.metaData.variables['image1_image_data']
-    dataValue = variableFound[closestDateTimeIndex, minDistanceDataIndex/256, minDistanceDataIndex%256] 
-    print "dataValue=",dataValue,variableFound.units
-    # dataValue= 0.59 kg m-2
-
-
-
-#givenDateTime=2006-01-03 00:10:00, closestDateTime=2005-12-31 23:55:00, closestDateTimeIndex=0
-#Computing distance (4.7523099778699995, 52.637247324700006): to lat-lon-grid [256x256]; gridSize=65536
-#Minimum distance (4.7523099778699995, 52.637247324700006): is 403.618767; [29829] = [  4.74769403  52.63954302]
 
 
 

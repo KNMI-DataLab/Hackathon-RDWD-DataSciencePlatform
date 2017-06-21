@@ -10,7 +10,9 @@ meld data/ExportOngevalsData10lines.csv output/meteoDataAdded.csv
 FULL-JOB:
 
 ``` sh
-python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAdded.csv --limitTo 10
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv  --limitTo 10
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv
+
 ```
 
 SCAN-JOB:
@@ -68,8 +70,7 @@ Niveaukop,Uur,datum,minuut,ernong,N_Slacht_dood,N_Slacht_Zh,Aardong,loctypon,X,Y
 PREVIEW-JOB:
 
 ``` sh
-python wrangleCSV_NCDF.py            --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv 
-
+python wrangleCSV_NCDF.py --inputCSV ./data/ExportOngevalsData.csv --metaCSV ./data/metaDataCsv.json --jobDesc ./data/jobDesc.json --outputCSV ./output/meteoDataAddedFull.csv 
 ```
 
 ######### TESTING example:  #############
