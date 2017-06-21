@@ -11,24 +11,32 @@ class WrangleProcess(WPSProcess):
                             version = "0.1",
                             storeSupported = "true",
                             statusSupported = "true",
-                            abstract=("The wrangle process accepts the relative path of a CSV file in the basket, as well as a relative path to the metadata description of the CSV file and a description of the process."
+                            abstract=("The wrangle process accepts the relative path of a "
+                                      "CSV file in the basket, as well as a relative path "
+                                      "to the metadata description of the CSV file and a "
+                                      "description of the process. "
                                       "The result of the process is a wrangled CSV file."),
                             grassLocation =False)
 
         self.inputCSVPath = self.addLiteralInput(identifier = "inputCSVPath",
-                                                 title = "The path/URL to the input CSV file which needs to be wrangled",
+                                                 title = ("The path/URL to the input CSV file "
+                                                          "which needs to be wrangled"),
                                                  type="String")
 
         self.metaCSVPath = self.addLiteralInput(identifier="metaCSVPath",
-                                                title="The path to the metadata describing the CSV file in JSON format",
+                                                title=("The path to the metadata describing "
+                                                       "the CSV file in JSON format"),
                                                 type="String")
 
         self.jobDescPath = self.addLiteralInput(identifier="jobDescPath",
-                                                title="A path to the description of the parameters which should be added to the input CSV",
+                                                title=("A path to the description of the "
+                                                       "parameters which should be added "
+                                                       "to the input CSV"),
                                                 type="String")
 
         self.limit = self.addLiteralInput(identifier="limit",
-                                          title="An optional limit in the amount of lines which should be processed",
+                                          title=("An optional limit in the amount of lines "
+                                                 "which should be processed"),
                                           type=types.IntType,
                                           default=-1)
 
@@ -38,10 +46,10 @@ class WrangleProcess(WPSProcess):
         self.percentComplete = 0
 
     def statusCallback(self, message, percentComplete=0):
-        self.percentComplete += percentComplete
+        # self.percentComplete += percentComplete
+        self.percentComplete = percentComplete
         if self.percentComplete >= 100: self.percentComplete = 100
         self.status.set(message, self.percentComplete)
-        time.sleep(0.5)
         
     def execute(self):
 
@@ -68,12 +76,11 @@ class WrangleProcess(WPSProcess):
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
             dwp.ReadInputCSV()
-            self.status.set("Starting the wrangling process", 55)
-            time.sleep(5)
+            self.status.set("Starting the wrangling process", 0)
             dwp.WrangleWithNetCdfData({"outputCSV":basket+"/"+outputFileName})
         except Exception, e:
             self.status.set(e, 500)
-            raise Exception(e)
+            raise e
             return 1
 
         self.outputURL.setValue(urlToBasket+"/"+outputFileName)

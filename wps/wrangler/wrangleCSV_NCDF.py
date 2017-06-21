@@ -110,8 +110,8 @@ class dataWranglerProcessor():
         self.progressTotalItems = 100
         self.progressItemCounter = 0
         self.progressBatchSize   = 1 # Number of items in processing batches that represent 1% of the job;
-        # This triggers the status-update.
-        
+                                     # This triggers the status-update.
+        self.statusCallback = None
         
 
     def __del__(self):
@@ -162,6 +162,9 @@ class dataWranglerProcessor():
         if not os.path.exists(self.inputCSV):
             printProgress("ERROR: inputCSV does NOT exists! %s " %(self.inputCSV))
             raise ValueError('MISSING-input-file(s)')
+
+        if "statusCallback" in argsDict:
+            self.statusCallback = argsDict["statusCallback"]
             
         self.csvDataObj = csvT.csvDataObject()
 
@@ -210,6 +213,9 @@ class dataWranglerProcessor():
 
     def GetProjectionString(self):
         return self.csvDataObj.GetProjectionString()
+
+    def callStatusCallback(self, message, percentComplete=0):
+        if self.statusCallback: self.statusCallback(message, percentComplete)
         
     def WrangleWithNetCdfData(self, argsDict):
         '''
@@ -244,7 +250,7 @@ class dataWranglerProcessor():
         
         self.totalNumberOfCSVrows = self.csvDataObj.GetTotalNumberOfCSVrows()
         self.nproc = 1
-        self.processingBulkSize = self.totalNumberOfCSVrows / 100   # number of rows representing 01% of total
+        self.processingBulkSize = self.totalNumberOfCSVrows / 100   # number of rows representing 1% of total
         # split temporary request data into #nr bulks
         bulkNr = 0
         rowsProcessed = 0
@@ -258,6 +264,7 @@ class dataWranglerProcessor():
             self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
+            self.callStatusCallback("Calculating", bulkNr)
         
         self.csvDataObj.WriteCSVHeader(fieldList = ["utc-time","longitude","latitude", "temperature", "precipitation"] )
         self.csvDataObj.JoinBulkResults(tempFileList)
@@ -327,8 +334,3 @@ if __name__ == "__main__":
         sys.exit(1)
 
     sys.exit(0)
-    
-
-
-
-
