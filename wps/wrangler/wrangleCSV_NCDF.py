@@ -38,10 +38,11 @@ import csvTooling as csvT
 import logging
 from csvTooling import printProgress 
 import jsonTooling as jst
-
+import ncdfTooling as ncdft
 import os, sys, glob
 from optparse import OptionParser
 import pprint
+import numpy as np
 
 
 if "WPS_DATAPATH" in os.environ.keys():
@@ -218,6 +219,37 @@ class dataWranglerProcessor():
 
     def callStatusCallback(self, message, percentComplete=0):
         if self.statusCallback: self.statusCallback(message, percentComplete)
+
+    def GetValueFromNetCdfDataSource_time_lon_lat(self, dataSource, arrayName, givenDateTime, lon, lat):
+        ndo = dataSource["ndo"]
+        # MANUAL EXAMPLE of WRANGLING:
+        # 1) Identify the closest time 
+        closestDateTimeIndex = ndo.FindClosestDateTimeIndex(givenDateTime)
+        # TODO: What if the request is outside the timerange ??
+        # ndo.minDateTime, ndo.maxDateTime, ndo.deltaTime
+        
+        # 2) Find the closest grid-point of the data
+        minDistanceDataIndex = ndo.FindClosestLonLatPointIndex(lon, lat)
+        # TODO: What if the request is outside the bouding-box of this netCDF datasource ??
+        # ndo.llbox_west,ndo.llbox_east,ndo.llbox_north,ndo.llbox_south 
+        
+        # 3) Get the data the closest-time and the closest grid-point
+        dataValue = ndo.GetDataAtIndex(closestDateTimeIndex, minDistanceDataIndex, variableName=arrayName)
+        return dataValue
+        
+    def WrangleWithNetCdfDataArray(self, dataSource, arrayName):
+        # self.csvDataObj.queryDataNPAdtsLL: 2-dimensional numpy array [  [id, utc-time, longitude, latitude ], .. ] 
+        valueList = []
+        for timeLonLat in self.csvDataObj.queryDataNPAdtsLL:
+            print timeLonLat, timeLonLat
+            idn     = timeLonLat[0]
+            utcTime = timeLonLat[1]
+            lon     = timeLonLat[2]
+            lat     = timeLonLat[3]
+            value = self.GetValueFromNetCdfDataSource_time_lon_lat(dataSource, arrayName, utcTime, lon, lat)
+            valueList.append(value)
+        valueArray = np.array(valueList)
+        return valueArray
         
     def WrangleWithNetCdfData(self, argsDict):
         '''
@@ -249,26 +281,59 @@ class dataWranglerProcessor():
         self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
         self.csvDataObj.ProduceOutput(exportLonLat = True)
         '''
+        '''      
+        {"datatowrangle":
+         [ 
+           {
+             "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc",
+        #    r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc"
+        #     "/visdataATX/hackathon/radarFullWholeData.nc"     
+             "fields": ["precipitation_amount"]
+           }
+        ]
+        }
+        '''
+        for dataSource in self.jobDescDict["datatowrangle"]:
+            url = dataSource["dataURL"]
+            ndo = ncdft.ncdfDataObject()
+            ndo.SetDataURL(url)
+            ndo.OpenMetaData()
+            dataSource["ndo"] = ndo
         
         self.totalNumberOfCSVrows = self.csvDataObj.GetTotalNumberOfCSVrows()
         self.nproc = 1
-        self.processingBulkSize = self.totalNumberOfCSVrows / 100   # number of rows representing 1% of total
+        self.percentFraction = 0.01
+        self.percentParts = int( 100/self.percentFraction )
+        
+        if self.limitTo>0:
+            self.processingBulkSize = self.limitTo
+        else:
+            self.processingBulkSize = self.totalNumberOfCSVrows / self.percentParts    # number of rows representing 1% (0.1%,0.01%) of total
         # split temporary request data into #nr bulks
         bulkNr = 0
         rowsProcessed = 0
         tempFileList = []
+        parameterList = ["utc-time","longitude","latitude"]
         while rowsProcessed<self.totalNumberOfCSVrows:
             self.csvDataObj.ReadFullQueryDataFromTmpFile(tmpFileName, startAtRow = rowsProcessed, readRows=self.processingBulkSize)
-            self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
-            self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
-            tmpBulkFileName = "./tempBulkOutputFile%03d.csv"%(bulkNr)
+
+            for dataSource in self.jobDescDict["datatowrangle"]:
+                for parameterName in dataSource["fields"]:
+                    self.csvDataObj.meteoDataStore[parameterName] = self.WrangleWithNetCdfDataArray(dataSource, parameterName)
+                    parameterList.append(parameterName)
+
+            #self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
+            #self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
+            tmpBulkFileName = "./tempBulkOutputFile%d.csv"%(bulkNr)
             tempFileList.append(tmpBulkFileName)
             self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
             rowsProcessed +=self.processingBulkSize
             bulkNr += 1
-            self.callStatusCallback("Calculating", bulkNr)
+            self.callStatusCallback("Calculating", bulkNr*self.percentFraction)
+            if self.limitTo>0 and rowsProcessed > self.limitTo:
+                break
         
-        self.csvDataObj.WriteCSVHeader(fieldList = ["utc-time","longitude","latitude", "temperature", "precipitation"] )
+        self.csvDataObj.WriteCSVHeader(fieldList = parameterList )
         self.csvDataObj.JoinBulkResults(tempFileList)
         
         printProgress("*******************************************")

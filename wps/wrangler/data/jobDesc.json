@@ -1,9 +1,11 @@
-{"datatowrangle":
+{
+"csvinputfile": "example.csv",
+"datatowrangle":
  [ 
    {
-     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc",
+     "dataURL":  "/visdataATX/hackathon/radarFullWholeData.nc",
+#     "dataURL": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc",
 #    r"http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFull2015.nc"
-#     "/visdataATX/hackathon/radarFullWholeData.nc"     
      "fields": ["precipitation_amount"]
    }
 #   ,

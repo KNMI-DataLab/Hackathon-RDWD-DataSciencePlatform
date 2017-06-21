@@ -119,6 +119,8 @@ class ncdfDataObject(dataObjectBase):
     
        
     def FindClosestLonLatPointIndex(self, lon, lat):
+        self.givenLon = lon
+        self.givenLat = lat
         #  This works with 2D array self.lonLatStacked: [ [lon,lat], ... ]
         printProgress("Computing distance %s: to lat-lon-grid [%dx%d]; gridSize=%d" %(str((lon, lat)),self.xDim,self.yDim,self.gridSize))
         idx = 0
@@ -136,13 +138,13 @@ class ncdfDataObject(dataObjectBase):
         return minDistIndex
 
     def GetVariable(self, variableName):
-        keylist = ndo.metaData.variables.keys()
+        keylist = self.metaData.variables.keys()
         variableFound = None
         for k in keylist:
             try:
-                if ndo.metaData.variables[k].standard_name == variableName:
-                    #  ndo.metaData.variables['image1_image_data'].standard_name == variableName ..
-                    variableFound = ndo.metaData.variables[k]
+                if self.metaData.variables[k].standard_name == variableName:
+                    #  self.metaData.variables['image1_image_data'].standard_name == variableName ..
+                    variableFound = self.metaData.variables[k]
             except:
                 pass
         return variableFound
@@ -158,7 +160,7 @@ class ncdfDataObject(dataObjectBase):
         
         self.lonLatStacked [256 * 256] of [ lon, lat ]
         
-        print ndo.metaData.variables['image1_image_data']
+        print self.metaData.variables['image1_image_data']
         
         <type 'netCDF4._netCDF4.Variable'>
         uint16 image1_image_data(time, y, x)
@@ -177,12 +179,12 @@ class ncdfDataObject(dataObjectBase):
         ''' 
         idX = dataIndex % self.xDim
         idY = dataIndex / self.xDim
-        keylist = ndo.metaData.variables.keys()
+        keylist = self.metaData.variables.keys()
         variableFound = self.GetVariable(variableName)
         if variableFound:
             dataValue = variableFound[timeIndex][idY][idX]
             printProgress("givenDateTime=%s, closestDateTimeIndex=%d, query(lon, lat)=%s, minDistanceDataIndex=%d, dataValue=%f %s"
-            %(str(givenDateTime), timeIndex, str((lon, lat)), dataIndex, float(dataValue), variableFound.units) )
+            %(str(self.givenDateTime), timeIndex, str((self.givenLon, self.givenLat)), dataIndex, float(dataValue), variableFound.units) )
             return dataValue
         else:
             return None
@@ -206,15 +208,17 @@ if __name__ == "__main__":  # ONLY for testing
     #ndo.SetDataURL("/visdataATX/hackathon/radarFullWholeData.nc")
     ndo.OpenMetaData()
     
-    
+        
     # MANUAL EXAMPLE of WRANGLING:
     # 1) Identify the closest time 
     fmt = '%Y-%m-%d %H:%M:%S %Z'
     givenDateTime = datetime.strptime('2010-07-14 16:33:00 UTC',fmt)
+    #givenDateTime = datetime.strptime('2006-01-03 00:10:00 UTC',fmt)
     closestDateTimeIndex = ndo.FindClosestDateTimeIndex(givenDateTime)
     
     # 2) Find the closest grid-point of the data
     (lon, lat) = (5.2, 52.0)
+    #(lon, lat) = (4.7523099778699995, 52.637247324700006)
     minDistanceDataIndex = ndo.FindClosestLonLatPointIndex(lon, lat)
     
     # 3) Get the data the closest-time and the closest grid-point
@@ -230,6 +234,10 @@ if __name__ == "__main__":  # ONLY for testing
     # dataValue= 0.59 kg m-2
 
 
+
+#givenDateTime=2006-01-03 00:10:00, closestDateTime=2005-12-31 23:55:00, closestDateTimeIndex=0
+#Computing distance (4.7523099778699995, 52.637247324700006): to lat-lon-grid [256x256]; gridSize=65536
+#Minimum distance (4.7523099778699995, 52.637247324700006): is 403.618767; [29829] = [  4.74769403  52.63954302]
 
 
 

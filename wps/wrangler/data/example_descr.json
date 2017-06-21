@@ -13,6 +13,9 @@
     "columnHour": 1,
     "columnMinute": 3
 }
+# For testing put this in your basket:
+# example.csv
+# example_descr.json
 
 # Niveaukop,Uur,datum,minuut,ernong,N_Slacht_dood, N_Slacht_Zh,Aardong,loctypon,X,Y,N_Personenauto,N_Brom_snorfiets,N_Fiets,N_Voetganger
 # Ongeval exact gekoppeld aan BN,7.00-07.59,07JAN06,50,Letsel,0,1,Frontaal,Kruispunt,95069,451430,1,0,0,0

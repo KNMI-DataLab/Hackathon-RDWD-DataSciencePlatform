@@ -97,6 +97,7 @@ class dataObjectBase():
         
 
     def FindClosestDateTimeIndex(self, givenDateTime):
+        self.givenDateTime = givenDateTime
         closestDateTime = self.FindClosestDateTime(givenDateTime, self.dateTimeArray)
         closestDateTimeIndex = np.where(self.dateTimeArray == closestDateTime)[0][0]  # np.where(self.dateTimeArray == closestDateTime) == gives= => [(array([2511]),)]
         csvT.printProgress("givenDateTime=%s, closestDateTime=%s, closestDateTimeIndex=%d" %(str(givenDateTime),str(closestDateTime),closestDateTimeIndex ))

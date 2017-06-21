@@ -473,8 +473,18 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
             #dataTmpCSV = np.recfromtxt(tmpFileName, skip_header=1, comments="#", dtype='int,datetime64,float,float',  delimiter=',')
             #date_parser = pd.datetools.to_datetime            
             dataTmpCSV = pd.read_csv(tmpFileName, sep=',', header=None, skiprows=1+startAtRow, names=headers, dtype=dtypes, parse_dates=parse_dates)
+
         
-        self.queryDataNPAdtsLL = dataTmpCSV.values[:]
+        #self.queryDataNPAdtsLL = dataTmpCSV.values[:]
+        dateTimeArrayTimestamp =  dataTmpCSV["utc-time"] # pandas dataframe
+        dateTimeArray  =  dateTimeArrayTimestamp.dt.to_pydatetime()
+        print "dateTimeArray:\n",dateTimeArray
+        printProgress( "dateTimeArray.queryDataNPAdtsLL=\n"+str(dateTimeArray) )
+        size = dateTimeArray.shape[0]
+        self.queryDataNPAdtsLL = np.hstack((dataTmpCSV.values[:,0].reshape(size,1), dateTimeArray.reshape(size,1), dataTmpCSV.values[:,2].reshape(size,1), dataTmpCSV.values[:,3].reshape(size,1) ) )
+        
+        printProgress( "self.queryDataNPAdtsLL=\n"+str(self.queryDataNPAdtsLL) )
+        #printProgress( "self.queryDataNPAdtsLL[:,1].astype(np.datetime64))=\n"+str(self.queryDataNPAdtsLL[:,1].astype(np.datetime64)) )
         printProgress( "self.queryDataNPAdtsLL.shape="+str(self.queryDataNPAdtsLL.shape) )
         
         if self.verbose and  self.verboseLevel>=10:
