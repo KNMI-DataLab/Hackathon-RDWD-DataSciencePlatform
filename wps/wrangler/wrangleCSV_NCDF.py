@@ -37,6 +37,7 @@ import sys, os, os.path, string, datetime, re
 import csvTooling as csvT
 import logging
 from csvTooling import printProgress 
+import jsonTooling as jst
 
 import os, sys, glob
 from optparse import OptionParser
@@ -153,6 +154,7 @@ class dataWranglerProcessor():
             raise ValueError('MISSING-input-file(s)')
         else:
             self.jobDesc = argsDict["jobDesc"]
+            self.jobDescDict = jst.ReadJsonConfigurationFromFile(self.jobDesc)
 
         if not "limitTo" in argsDict:  # limitTo: OPTIONAL parameter
             self.limitTo = -1 # Does not apply limit; process the whole csv dataset
