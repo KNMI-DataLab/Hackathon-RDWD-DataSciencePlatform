@@ -1,7 +1,7 @@
 import wrangler.wrangleCSV_NCDF as wrangler
 from pywps.Process import WPSProcess
 
-import sys, logging, json, types, os, time, tempfile, uuid
+import sys, logging, json, types, os, time, tempfile, uuid, shutil
 
 class ScanCSVProcess(WPSProcess):
     def __init__(self):
@@ -73,6 +73,8 @@ class ScanCSVProcess(WPSProcess):
             metaCSVFile = open(basket+"/"+outputFileName, "w")
             json.dump(csvMetaData, metaCSVFile)
             metaCSVFile.close()
+            ## Make a copy two directories up.
+            shutil.copyfile(basket+"/"+outputFileName, basket+"/../../"+outputFileName)
             
         except Exception, e:
             self.status.set(e, 500)
