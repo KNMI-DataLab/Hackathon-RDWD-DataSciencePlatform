@@ -252,6 +252,7 @@ class dataWranglerProcessor():
             lon     = timeLonLat[2]
             lat     = timeLonLat[3]
             value = self.GetValueFromNetCdfDataSource_time_lon_lat(dataSource, arrayName, utcTime, lon, lat)
+            if value == None: return None
             valueList.append(value)
             recordsProcessed += 1
             if recordsProcessed % 10 == 0:
@@ -327,32 +328,38 @@ class dataWranglerProcessor():
         rowsProcessed = 0
         tempFileList = []
         parameterList = ["utc-time","longitude","latitude"]
-        while rowsProcessed<self.totalNumberOfCSVrows:
-            self.csvDataObj.ReadFullQueryDataFromTmpFile(tmpFileName, startAtRow = rowsProcessed, readRows=self.processingBulkSize)
+        try:
+            while rowsProcessed<self.totalNumberOfCSVrows:
+                self.csvDataObj.ReadFullQueryDataFromTmpFile(tmpFileName, startAtRow = rowsProcessed, readRows=self.processingBulkSize)
 
-            for dataSource in self.jobDescDict["datatowrangle"]:
-                for parameterName in dataSource["fields"]:
-                    self.csvDataObj.meteoDataStore[parameterName] = self.WrangleWithNetCdfDataArray(dataSource, parameterName, rowsProcessed)
-                    parameterList.append(parameterName)
+                for dataSource in self.jobDescDict["datatowrangle"]:
+                    for parameterName in dataSource["fields"]:
+                        valueArray = self.WrangleWithNetCdfDataArray(dataSource, parameterName, rowsProcessed)
+                        if valueArray == None:
+                            raise Exception("NONEXISTENT-variable: %s" % parameterName)
+                        self.csvDataObj.meteoDataStore[parameterName] = valueArray
+                        parameterList.append(parameterName)
 
-            #self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
-            #self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
-            tmpBulkFileName = "./tempBulkOutputFile%d.csv"%(bulkNr)
-            tempFileList.append(tmpBulkFileName)
-            self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
-            rowsProcessed +=self.processingBulkSize
-            bulkNr += 1
-            #if self.limitTo > 0:
-            #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo),
-            #                            (float(self.processingBulkSize) / float(self.limitTo)) * 100.0)
-            #else:
-            #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows),
-            #                            self.percentFraction)
-            if self.limitTo>0 and rowsProcessed >= self.limitTo:
-                break
-        
-        self.csvDataObj.WriteCSVHeader(fieldList = parameterList )
-        self.csvDataObj.JoinBulkResults(tempFileList)
+                #self.csvDataObj.WrangleMeteoParameter(parameterName = "temperature")
+                #self.csvDataObj.WrangleMeteoParameter(parameterName = "precipitation")
+                tmpBulkFileName = "./tempBulkOutputFile%d.csv"%(bulkNr)
+                tempFileList.append(tmpBulkFileName)
+                self.csvDataObj.ProduceBulkOutput(tmpBulkFileName, bulkNr, startAtRow = rowsProcessed, readRows=self.processingBulkSize, exportLonLat = True)
+                rowsProcessed +=self.processingBulkSize
+                bulkNr += 1
+                #if self.limitTo > 0:
+                #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.limitTo),
+                #                            (float(self.processingBulkSize) / float(self.limitTo)) * 100.0)
+                #else:
+                #    self.callStatusCallback("Calculating. %d of %d records processed" % (rowsProcessed, self.totalNumberOfCSVrows),
+                #                            self.percentFraction)
+                if self.limitTo>0 and rowsProcessed >= self.limitTo:
+                    break
+        except:
+            raise
+        finally:
+            self.csvDataObj.WriteCSVHeader(fieldList = parameterList )
+            self.csvDataObj.JoinBulkResults(tempFileList)
         
         printProgress("*******************************************")
         printProgress("***** Wrangling Processing FINISHED. ******")
