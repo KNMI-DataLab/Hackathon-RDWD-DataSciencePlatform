@@ -1,0 +1,24 @@
+{
+    "name": "27cb905f-c49c-4c98-b7b4-861fe3ab7927",
+    "title": "radar precipitation",
+    "timeResolution": 300,
+    "spatialResolution": 1.0,
+    "end": "2016-12-31T23:59",
+    "start": "2006-01-01T00:00",
+    "parameterList": [
+        {
+            "standardName": "precipitation",
+            "varName": "precip"
+        }
+    ],
+    "projection": "+proj=stere +lat_0=90 +lon_0=0.0 +lat_ts=60.0 +a=6378.388 +b=6356.912 +x_0=0 +y_0=0",
+    "boundingBox": [
+        0.0,
+        49.373,
+        9.743,
+        55.296
+    ],
+    "datatype": "GRID",
+    "source": "OBSERVATION",
+    "datalocation": "http://opendap.knmi.nl/knmi/thredds/dodsC/DATALAB/hackathon/radarFullWholeData.nc"
+}
