@@ -53,6 +53,7 @@ longitudes.units = "degrees east"
 longitudes.standard_name = "longitude"
 longitudes.long_name = "station longitude"
 
+temperatures.long_name = "temperature"
 temperatures.units = "degrees Celsius"
 temperatures.coordinates = "lat lon"
 #temperatures._FillValue = "-9999.f"
