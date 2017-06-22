@@ -58,8 +58,8 @@ class ScanCSVProcess(WPSProcess):
 
         dwp_dict = {"inputCSV":basket+"/../../"+inputCSVPath,
                     "metaCSV":basket+"/../../"+descCSVPath,
-                    "jobDesc":basket+"/../../"+jobDescPath,
                     "statusCallback":self.statusCallback,
+                    "scanOnly": True,
                     "logFile":basket+"/"+inputCSVPath_t[0]+".log"}
         try:
             dwp = wrangler.dataWranglerProcessor()

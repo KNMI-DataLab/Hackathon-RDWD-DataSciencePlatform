@@ -123,7 +123,7 @@ class dataWranglerProcessor():
         '''
         dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
                           "logFile":options.outputCSV+".log",        
-                          "limitTo": options.limitTo,
+                          "limitTo": options.limitTo, "scanOnly": True
                           "verboseLevel" : 10  // 0,1,10 
                     } )
         OPTIONAL parameters:  limitTo, verboseLevel
@@ -150,12 +150,17 @@ class dataWranglerProcessor():
         else:
             self.metaCSV = argsDict["metaCSV"]
 
-        if not "jobDesc" in argsDict:
+        if not "jobDesc" in argsDict and not ("scanOnly" in argsDict and argsDict["scanOnly"]):
             printProgress("ERROR: jobDesc must be provided! ")
             raise ValueError('MISSING-input-file(s)')
-        else:
+        elif "jobDesc" in argsDict and not ("scanOnly" in argsDict and argsDict["scanOnly"]):
             self.jobDesc = argsDict["jobDesc"]
             self.jobDescDict = jst.ReadJsonConfigurationFromFile(self.jobDesc)
+            self.scanOnly = False
+        elif ("scanOnly" in argsDict and argsDict["scanOnly"]):
+            self.jobDesc = None
+            self.jobDescDict = None
+            self.scanOnly = True
 
         if not "limitTo" in argsDict:  # limitTo: OPTIONAL parameter
             self.limitTo = -1 # Does not apply limit; process the whole csv dataset
@@ -177,7 +182,7 @@ class dataWranglerProcessor():
         
         self.csvDataObj.SetInputCSVFile(self.inputCSV)
         self.csvDataObj.SetInputMetaCSVFile(self.metaCSV)
-        self.csvDataObj.SetJobDescriptionFile(self.jobDesc)
+        if not self.scanOnly: self.csvDataObj.SetJobDescriptionFile(self.jobDesc)
         if not os.path.exists("./output"):
             os.makedirs("./output")
         self.csvDataObj.ApplyLimit(self.limitTo)
@@ -396,11 +401,11 @@ if __name__ == "__main__":
     csvT.logFileName = options.logfile[:]
     
     try:
-        dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV, "jobDesc": options.jobDesc,
-                          "logFile":options.outputCSV+".log", 
+        dwp.Initialize( { "inputCSV":options.inputCSV, "metaCSV": options.metaCSV,
+                          "jobDesc": options.jobDesc, "logFile":options.outputCSV+".log", 
                           #"logFile": csvT.logFileName,                          
-                          "limitTo": options.limitTo,
-                          "verboseLevel": options.verboseLevel
+                          "limitTo": options.limitTo, "verboseLevel": options.verboseLevel,
+                          "scanOnly": options.scanOnly
                         } )    
         dwp.ReadInputCSV()
         if not options.scanOnly:
