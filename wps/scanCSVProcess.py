@@ -1,7 +1,7 @@
 import wrangler.wrangleCSV_NCDF as wrangler
 from pywps.Process import WPSProcess
 
-import sys, logging, json, types, os, time, tempfile, uuid
+import sys, logging, json, types, os, time, tempfile, uuid, shutil
 
 class ScanCSVProcess(WPSProcess):
     def __init__(self):
@@ -27,10 +27,6 @@ class ScanCSVProcess(WPSProcess):
                                                 title="The path to the metadata describing the CSV file in JSON format",
                                                 type="String")
 
-        self.jobDescPath = self.addLiteralInput(identifier="jobDescPath",
-                                                title="A path to the description of the parameters which should be added to the input CSV",
-                                                type="String")
-
         self.outputURL = self.addLiteralOutput(identifier="outputURL",
                                                title="The url to the output CSV file",
                                                type="String")
@@ -48,7 +44,6 @@ class ScanCSVProcess(WPSProcess):
         inputCSVPath_t = os.path.splitext(inputCSVPath)
         outputFileName = inputCSVPath_t[0]+"_metadata.json"
         descCSVPath = self.descCSVPath.getValue()
-        jobDescPath = self.jobDescPath.getValue()
 
         currentBasket = inputCSVPath_t[0]+"_"+time.strftime("%Y%m%dt%H%M%S"+"_")
         pathToBasket = os.environ['POF_OUTPUT_PATH']
@@ -78,6 +73,8 @@ class ScanCSVProcess(WPSProcess):
             metaCSVFile = open(basket+"/"+outputFileName, "w")
             json.dump(csvMetaData, metaCSVFile)
             metaCSVFile.close()
+            ## Make a copy two directories up.
+            shutil.copyfile(basket+"/"+outputFileName, basket+"/../../"+outputFileName)
             
         except Exception, e:
             self.status.set(e, 500)

@@ -1,6 +1,6 @@
 from pywps.Process import WPSProcess
 import wrangler.wrangleCSV_NCDF as wrangler
-import sys, logging, types, os, time, tempfile
+import sys, logging, types, os, time, tempfile, json
 
 class WrangleProcess(WPSProcess):
     def __init__(self):
@@ -28,10 +28,15 @@ class WrangleProcess(WPSProcess):
                                                        "the CSV file in JSON format"),
                                                 type="String")
 
-        self.jobDescPath = self.addLiteralInput(identifier="jobDescPath",
-                                                title=("A path to the description of the "
-                                                       "parameters which should be added "
-                                                       "to the input CSV"),
+        self.dataURL = self.addLiteralInput(identifier="dataURL",
+                                                title=("(OPeNDAP) URL pointing to the datafile "
+                                                       "that the given CSV needs to be wrangled "
+                                                       "with."),
+                                                type="String")
+        self.variables = self.addLiteralInput(identifier="dataVariables",
+                                                title=("Name of the variables to extract the value"
+                                                       "of for matching records. Need to be in a"
+                                                       "comma separated list."),
                                                 type="String")
 
         self.limit = self.addLiteralInput(identifier="limit",
@@ -57,22 +62,30 @@ class WrangleProcess(WPSProcess):
         inputCSVPath_t = os.path.splitext(inputCSVPath)
         outputFileName = inputCSVPath_t[0]+"_wrangled"+inputCSVPath_t[1]
         metaCSVPath = self.metaCSVPath.getValue()
-        jobDescPath = self.jobDescPath.getValue()
         limit = self.limit.getValue()
+
+        variables = self.variables.getValue().split(',')
 
         currentBasket = inputCSVPath_t[0]+"_"+time.strftime("%Y%m%dt%H%M%S"+"_")
         pathToBasket = os.environ['POF_OUTPUT_PATH']
 
         basket = tempfile.mkdtemp(prefix=currentBasket, dir=pathToBasket)
         urlToBasket  = os.environ['POF_OUTPUT_URL']+"/"+basket[len(pathToBasket):]
+        jobDescPath = basket+"/"+inputCSVPath_t[0]+"_jobdesc.json"
 
         dwp_dict = {"inputCSV":basket+"/../../"+inputCSVPath,
                     "metaCSV":basket+"/../../"+metaCSVPath,
-                    "jobDesc":basket+"/../../"+jobDescPath,
+                    "jobDesc":jobDescPath,
                     "logFile":basket+"/"+inputCSVPath_t[0]+".log",
                     "statusCallback":self.statusCallback,
                     "limitTo":limit}
         try:
+            jobDesc = {"csvinputfile":dwp_dict['inputCSV'],
+                       "datatowrangle":[{"dataURL":self.dataURL.getValue(), "fields":variables},],}
+            jobDescFile = open(jobDescPath, "w")
+            json.dump(jobDesc, jobDescFile)
+            jobDescFile.close()
+
             dwp = wrangler.dataWranglerProcessor()
             dwp.Initialize(dwp_dict)
             dwp.ReadInputCSV()
