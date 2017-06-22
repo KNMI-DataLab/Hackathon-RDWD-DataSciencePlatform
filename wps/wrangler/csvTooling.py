@@ -382,9 +382,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.minDateTime = np.min(self.dateTimeArrayClean).astype(datetime).replace(tzinfo=pytz.UTC)
         self.maxDateTime = np.max(self.dateTimeArrayClean).astype(datetime).replace(tzinfo=pytz.UTC)
 
-        fmt = '%Y-%m-%d %H:%M:%S %Z'
-        self.minDateTime_str = self.minDateTime.isoformat() 
-        self.maxDateTime_str = self.maxDateTime.isoformat()
+        fmt = '%Y-%m-%dT%H:%MZ'
+        self.minDateTime_str = self.minDateTime.strftime(fmt)
+        self.maxDateTime_str = self.maxDateTime.strftime(fmt)
 
 
         self.CLASSPRINT("##########################################################")
