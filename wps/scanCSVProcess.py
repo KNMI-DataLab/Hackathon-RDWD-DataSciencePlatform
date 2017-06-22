@@ -1,7 +1,7 @@
 import wrangler.wrangleCSV_NCDF as wrangler
 from pywps.Process import WPSProcess
 
-import sys, logging, json, types, os, time, tempfile
+import sys, logging, json, types, os, time, tempfile, uuid
 
 class ScanCSVProcess(WPSProcess):
     def __init__(self):
@@ -68,9 +68,12 @@ class ScanCSVProcess(WPSProcess):
 
             csvMetaData = {} ## JSON data object
             csvMetaData.update(dwp.GetTimeRangeOfData())
-            csvMetaData["observationType"] = "point"
-            csvMetaData["projString"] = dwp.GetProjectionString()
+            csvMetaData["name"] = str(uuid.uuid4())
+            csvMetaData["title"] = inputCSVPath_t[0]
+            csvMetaData["datatype"] = "POINT"
+            csvMetaData["projection"] = dwp.GetProjectionString()
             csvMetaData.update(dwp.GetLatLonBBOXOfData())
+            csvMetaData["source"] = "OBSERVATION"
 
             metaCSVFile = open(basket+"/"+outputFileName, "w")
             json.dump(csvMetaData, metaCSVFile)

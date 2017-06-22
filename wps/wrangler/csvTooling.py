@@ -251,7 +251,7 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
     
     def ReadCSVHeader(self):
         self.CLASSPRINT('reading header inputCSVfile: %s' %(self.inputCSVfile) )
-        self.numHeaderLines = 1
+        self.numHeaderLines = self.metaCSVdict['firstDataRow']
         # read and store header
         self.headerText = ""
         n = self.numHeaderLines
@@ -276,7 +276,9 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.metaCSVdict = jst.ReadJsonConfigurationFromFile(self.metaCSVfile)
         if self.verbose:
             self.CLASSPRINT(self.metaCSVdict )
-        self.delimiter = self.metaCSVdict['csvSeparator']
+        self.delimiter = self.metaCSVdict['columnSeparator']
+        self.linedelimiter = self.metaCSVdict['rowSeparator']
+        self.headerRow = self.metaCSVdict['rowWithFieldNames']
         self.columnsList = []
         self.columnsList.append(self.metaCSVdict['columnDate'])
         self.columnsList.append(self.metaCSVdict['columnHour'])
@@ -381,8 +383,8 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
         self.maxDateTime = np.max(self.dateTimeArrayClean).astype(datetime).replace(tzinfo=pytz.UTC)
 
         fmt = '%Y-%m-%d %H:%M:%S %Z'
-        self.minDateTime_str = self.minDateTime.strftime(fmt) 
-        self.maxDateTime_str = self.maxDateTime.strftime(fmt)
+        self.minDateTime_str = self.minDateTime.isoformat() 
+        self.maxDateTime_str = self.maxDateTime.isoformat()
 
 
         self.CLASSPRINT("##########################################################")
@@ -518,24 +520,16 @@ array([['03JAN06', '1.00-01.59', '10', '111998', '516711'],
                         "maxDateTime": "2006-01-30 08:57:00 UTC" }
         Note: The actual range is compute in function: ReadInputCSV()
         '''
-        dataRange =  {  "minDateTime": self.minDateTime_str,
-                        "maxDateTime": self.maxDateTime_str }
+        dataRange =  {  "start": self.minDateTime_str,
+                        "end": self.maxDateTime_str }
         return dataRange
     
     def GetLatLonBBOXOfData(self):
         '''
-        Return json: {  "west": 4.0161296310787549,
-                        "east": 6.8340902374793098,
-                        "north": 50.304600877017236,
-                        "south": 48.4668502279617
-                     }
         Note: The actual range is compute in function: ReadInputCSV()
         '''
-        LATLONBBOX =  { "west": self.llbox_west,
-                        "east": self.llbox_east,
-                        "north": self.llbox_north,
-                        "south": self.llbox_south
-                     }
+        LATLONBBOX = {"boundingBox": [ self.llbox_west, self.llbox_south,
+                       self.llbox_east, self.llbox_north ]}
         return LATLONBBOX
 
     def GetProjectionString(self):
