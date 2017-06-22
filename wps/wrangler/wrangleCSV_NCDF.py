@@ -358,8 +358,10 @@ class dataWranglerProcessor():
         except:
             raise
         finally:
-            self.csvDataObj.WriteCSVHeader(fieldList = parameterList )
-            self.csvDataObj.JoinBulkResults(tempFileList)
+            try:
+                self.csvDataObj.WriteCSVHeader(fieldList = parameterList )
+                self.csvDataObj.JoinBulkResults(tempFileList)
+            except: pass
         
         printProgress("*******************************************")
         printProgress("***** Wrangling Processing FINISHED. ******")
